@@ -24,7 +24,7 @@ import java.util.Enumeration;
 
 public class Client {
 
-    private String HOST_SERVER1 = "127.0.0.1";
+    private String HOST_SERVER1 = "10.5.11.55";
     private String HOST_SERVER2 = "127.0.0.1";
     private int PORT_1 = 9123;
     private int PORT_2 = 9124;

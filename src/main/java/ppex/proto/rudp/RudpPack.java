@@ -1,6 +1,7 @@
 package ppex.proto.rudp;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import ppex.proto.entity.Connection;
 import ppex.proto.msg.Message;
 import ppex.proto.tpool.IThreadExecute;
@@ -50,7 +51,9 @@ public class RudpPack {
     }
 
     public void read(ByteBuf buf) {
-        this.queue_rcv.add(buf.readSlice(buf.readableBytes()));
+        ByteBuf buf1 = PooledByteBufAllocator.DEFAULT.buffer(buf.readableBytes());
+        buf1.writeBytes(buf);
+        this.queue_rcv.add(buf1);
         notifyRcvEvent();
     }
 
