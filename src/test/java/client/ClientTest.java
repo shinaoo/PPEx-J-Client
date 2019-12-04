@@ -27,6 +27,7 @@ public class ClientTest {
         TimeUnit.SECONDS.sleep(2);
     }
 
+    @Test
     public void startDetect() throws Exception {
 
     }

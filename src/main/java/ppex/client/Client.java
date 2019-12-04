@@ -172,4 +172,32 @@ public class Client {
     public ResponseListener getResponseListener() {
         return responseListener;
     }
+
+    public InetSocketAddress getAddrServer1() {
+        return addrServer1;
+    }
+
+    public InetSocketAddress getAddrServer2p1() {
+        return addrServer2p1;
+    }
+
+    public InetSocketAddress getAddrServer2p2() {
+        return addrServer2p2;
+    }
+
+    public InetSocketAddress getAddrLocal() {
+        return addrLocal;
+    }
+
+    public int getPORT_1() {
+        return PORT_1;
+    }
+
+    public int getPORT_2() {
+        return PORT_2;
+    }
+
+    public int getPORT_3() {
+        return PORT_3;
+    }
 }
