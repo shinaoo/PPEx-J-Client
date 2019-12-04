@@ -28,6 +28,7 @@ public class RudpScheduleTask implements ITask {
     @Override
     public void execute() {
         try {
+            System.out.println("RudpScheduleTask execute");
             long now = System.currentTimeMillis();
             //超时,便是关闭连接
             if (now - rudpPack.getTimeout() > rudpPack.getLasRcvTime()){

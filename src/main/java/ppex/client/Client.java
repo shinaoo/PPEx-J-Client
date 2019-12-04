@@ -155,6 +155,8 @@ public class Client {
         msg.setTo(new InetSocketAddress("127.0.0.1",PORT_1));
         msg.setReq(true);
         this.getAddrManager().get(addrServer1).write(MessageUtil.txtmsg2Msg(msg));
+        RudpScheduleTask task = new RudpScheduleTask(executor, addrManager.get(addrServer1), addrManager);
+        executor.executeTimerTask(task, addrManager.get(addrServer1).getInterval());
     }
 
     public IAddrManager getAddrManager() {

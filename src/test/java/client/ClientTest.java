@@ -25,4 +25,8 @@ public class ClientTest {
         client.sendTest();
         TimeUnit.SECONDS.sleep(2);
     }
+
+    public void startDetect() throws Exception{
+
+    }
 }
