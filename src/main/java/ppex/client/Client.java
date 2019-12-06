@@ -16,6 +16,7 @@ import ppex.proto.rudp.*;
 import ppex.proto.tpool.IThreadExecute;
 import ppex.proto.tpool.ThreadExecute;
 import ppex.utils.MessageUtil;
+import ppex.utils.NatTypeUtil;
 
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
@@ -41,6 +42,7 @@ public class Client {
     private Connection connServer1;
     private Connection connServer2p1;
     private Connection connServer2p2;
+    private Connection connLocal;
 
     private IAddrManager addrManager;
     private IOutputManager outputManager;
@@ -52,7 +54,7 @@ public class Client {
     private EventLoopGroup eventLoopGroup;
     private ClientHandler clientHandler;
 
-    public Client(){
+    public Client() {
         try {
             start();
         } catch (Exception e) {
@@ -82,6 +84,8 @@ public class Client {
         executor.start();
         clientHandler = new ClientHandler(this);
         responseListener = new MsgResponse();
+
+        connLocal = new Connection(name, addrLocal, name, NatTypeUtil.NatType.UNKNOWN.getValue());
     }
 
     private void startBootstrap() throws Exception {
@@ -100,7 +104,7 @@ public class Client {
         connServer1 = new Connection("unknown", new InetSocketAddress(HOST_SERVER1, PORT_1), "Server1", 0);
         //output需要Channel
         IOutput outputServer1 = new ClientOutput(channel, connServer1);
-        outputManager.put(addrServer1,outputServer1);
+        outputManager.put(addrServer1, outputServer1);
         RudpPack rudpPack = addrManager.get(addrServer1);
         if (rudpPack == null) {
             rudpPack = new RudpPack(outputServer1, executor, responseListener);
@@ -109,10 +113,11 @@ public class Client {
         rudpPack.sendReset();
         RudpScheduleTask task = new RudpScheduleTask(executor, rudpPack, addrManager);
         executor.executeTimerTask(task, rudpPack.getInterval());
+
     }
 
     private void stop() {
-        if (executor != null){
+        if (executor != null) {
             executor.stop();
         }
         if (eventLoopGroup != null) {
@@ -148,11 +153,11 @@ public class Client {
         return "";
     }
 
-    public void sendTest(){
+    public void sendTest() {
         TxtTypeMsg msg = new TxtTypeMsg();
         msg.setContent("this is from client");
-        msg.setFrom(new InetSocketAddress("127.0.0.1",PORT_3));
-        msg.setTo(new InetSocketAddress("127.0.0.1",PORT_1));
+        msg.setFrom(new InetSocketAddress("127.0.0.1", PORT_3));
+        msg.setTo(new InetSocketAddress("127.0.0.1", PORT_1));
         msg.setReq(true);
         this.getAddrManager().get(addrServer1).write(MessageUtil.txtmsg2Msg(msg));
     }
@@ -187,6 +192,14 @@ public class Client {
 
     public InetSocketAddress getAddrLocal() {
         return addrLocal;
+    }
+
+    public void setAddrLocal(InetSocketAddress addrLocal) {
+        this.addrLocal = addrLocal;
+    }
+
+    public Connection getConnLocal() {
+        return connLocal;
     }
 
     public int getPORT_1() {

@@ -5,12 +5,12 @@ import java.net.InetSocketAddress;
 public class Connection {
 
 
-    public String macAddress;                              //使用mac地址来识别每个Connection
-    public String peerName;
-    public InetSocketAddress address;
-    public int natType;
+    private String macAddress;                              //使用mac地址来识别每个Connection
+    private String peerName;
+    private InetSocketAddress address;
+    private int natType;
 
-    public Connection(String macAddress,InetSocketAddress address,String peerName,int natType) {
+    public Connection(String macAddress, InetSocketAddress address, String peerName, int natType) {
         this.macAddress = macAddress;
         this.address = address;
         this.peerName = peerName;
@@ -42,6 +42,14 @@ public class Connection {
 
     public void setAddress(InetSocketAddress address) {
         this.address = address;
+    }
+
+    public int getNatType() {
+        return natType;
+    }
+
+    public void setNatType(int natType) {
+        this.natType = natType;
     }
 
     @Override
