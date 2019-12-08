@@ -133,8 +133,8 @@ public class RudpPack {
         return queue_snd;
     }
 
-    public RudpPack makeRudppack(){
-
+    public static RudpPack newInstance(IOutput output, IThreadExecute executor, ResponseListener responseListener) {
+        return new RudpPack(output, executor, responseListener);
     }
 
 }

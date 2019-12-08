@@ -202,6 +202,14 @@ public class Client {
         return connLocal;
     }
 
+    public Channel getChannel() {
+        return channel;
+    }
+
+    public void setChannel(Channel channel) {
+        this.channel = channel;
+    }
+
     public int getPORT_1() {
         return PORT_1;
     }
