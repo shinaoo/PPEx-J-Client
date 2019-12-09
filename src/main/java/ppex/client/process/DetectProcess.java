@@ -82,13 +82,13 @@ public class DetectProcess {
     }
 
     public void one_send2s1() throws Exception {
-        RudpPack rudpPack = client.getAddrManager().get(client.getAddrServer1());
-        rudpPack.write(MessageUtil.probemsg2Msg(MessageUtil.makeClientStepOneProbeTypeMsg(client.getAddrLocal())));
+//        RudpPack rudpPack = client.getAddrManager().get(client.getAddrServer1());
+//        rudpPack.write(MessageUtil.probemsg2Msg(MessageUtil.makeClientStepOneProbeTypeMsg(client.getAddrLocal())));
     }
 
     public void two_send2s2p1() throws Exception {
-//        RudpPack rudpPack = client.getAddrManager().get(client.getAddrServer2p1());
-//        rudpPack.write(MessageUtil.probemsg2Msg(MessageUtil.makeClientStepTwoProbeTypeMsg(client.getAddrLocal())));
+        RudpPack rudpPack = client.getAddrManager().get(client.getAddrServer2p1());
+        rudpPack.write(MessageUtil.probemsg2Msg(MessageUtil.makeClientStepTwoProbeTypeMsg(client.getAddrLocal())));
     }
 
     public boolean isPublicNetwork() {
