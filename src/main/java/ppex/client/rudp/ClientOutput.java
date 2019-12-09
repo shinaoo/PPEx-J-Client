@@ -19,6 +19,16 @@ public class ClientOutput implements IOutput {
     }
 
     @Override
+    public Connection getConn() {
+        return this.connection;
+    }
+
+    @Override
+    public Channel getChannel() {
+        return channel;
+    }
+
+    @Override
     public void update(Channel channel) {
         this.channel = channel;
     }
@@ -29,14 +39,14 @@ public class ClientOutput implements IOutput {
         if (channel.isActive() && channel.isOpen()) {
             ChannelFuture fu = channel.writeAndFlush(packet);
             fu.addListener(future -> {
-                if (future.isSuccess()){
-                    System.out.println("channel writeandflush succ");
-                }else{
+                if (future.isSuccess()) {
+                    System.out.println("channel writeandflush succ" + sn);
+                } else {
                     System.out.println("channel writeandflush failed");
                     future.cause().printStackTrace();
                 }
             });
-        }else{
+        } else {
             System.out.println("channel is close");
         }
     }

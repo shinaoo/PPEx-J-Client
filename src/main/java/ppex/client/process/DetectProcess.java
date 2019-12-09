@@ -21,7 +21,16 @@ public class DetectProcess {
 
     private Client client;
 
-    public DetectProcess(Client client){
+    private static DetectProcess instance = null;
+    public static DetectProcess getInstance(){
+        if (instance == null){
+            instance = new DetectProcess();
+        }
+        return instance;
+    }
+    private DetectProcess(){}
+
+    public void setClient(Client client) {
         this.client = client;
     }
 
@@ -48,6 +57,11 @@ public class DetectProcess {
         }
     }
 
+    public void finish(){
+        RudpPack rudpPack = client.getAddrManager().get(client.getAddrServer1());
+        rudpPack.sendFinish();
+    }
+
     public NatTypeUtil.NatType getClientNATType(){
         //开始判断NAT类型
         if(isPublicNetwork){
@@ -69,12 +83,12 @@ public class DetectProcess {
 
     public void one_send2s1() throws Exception {
         RudpPack rudpPack = client.getAddrManager().get(client.getAddrServer1());
-        rudpPack.write(MessageUtil.probemsg2Msg(MessageUtil.makeClientStepOneProbeTypeMsg(client.getAddrLocal().getHostString(),client.getPORT_1())));
+        rudpPack.write(MessageUtil.probemsg2Msg(MessageUtil.makeClientStepOneProbeTypeMsg(client.getAddrLocal())));
     }
 
     public void two_send2s2p1() throws Exception {
-        RudpPack rudpPack = client.getAddrManager().get(client.getAddrServer2p1());
-        rudpPack.write(MessageUtil.probemsg2Msg(MessageUtil.makeClientStepTwoProbeTypeMsg(client.getAddrLocal().getHostString(),client.getPORT_1())));
+//        RudpPack rudpPack = client.getAddrManager().get(client.getAddrServer2p1());
+//        rudpPack.write(MessageUtil.probemsg2Msg(MessageUtil.makeClientStepTwoProbeTypeMsg(client.getAddrLocal())));
     }
 
     public boolean isPublicNetwork() {

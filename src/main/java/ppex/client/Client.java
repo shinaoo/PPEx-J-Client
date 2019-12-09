@@ -1,11 +1,17 @@
 package ppex.client;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.AdaptiveRecvByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollChannelOption;
+import io.netty.channel.epoll.EpollDatagramChannel;
+import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import org.apache.log4j.Logger;
 import ppex.client.rudp.ClientAddrManager;
 import ppex.client.rudp.ClientOutput;
 import ppex.client.rudp.ClientOutputManager;
@@ -18,15 +24,15 @@ import ppex.proto.tpool.ThreadExecute;
 import ppex.utils.MessageUtil;
 import ppex.utils.NatTypeUtil;
 
-import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
+import java.net.*;
 import java.util.Enumeration;
 
 public class Client {
 
-    private String HOST_SERVER1 = "10.5.11.55";
-    private String HOST_SERVER2 = "127.0.0.1";
+    private static Logger LOGGER = Logger.getLogger(Client.class);
+
+    private String HOST_SERVER1 = "10.5.11.162";
+    private String HOST_SERVER2 = "10.5.11.162";
     private int PORT_1 = 9123;
     private int PORT_2 = 9124;
     private int PORT_3 = 9125;
@@ -54,25 +60,28 @@ public class Client {
     private EventLoopGroup eventLoopGroup;
     private ClientHandler clientHandler;
 
-    public Client() {
-        try {
-            start();
-        } catch (Exception e) {
-            e.printStackTrace();
+    private static Client instance = null;
+    public static Client getInstance(){
+        if (instance == null){
+            instance = new Client();
         }
+        return instance;
     }
+    private Client(){}
 
     public void start() throws Exception {
         initParam();
         startBootstrap();
         initRudp();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> stop()));
+        System.out.println("addrLocal:" + addrLocal.toString());
     }
 
     private void initParam() {
 
         name = "Client1";
         addrMac = getMacAddress();
+        addrLocal = getLocalIpAddr();
 
         addrServer1 = new InetSocketAddress(HOST_SERVER1, PORT_1);
         addrServer2p1 = new InetSocketAddress(HOST_SERVER2, PORT_1);
@@ -83,17 +92,24 @@ public class Client {
         outputManager = new ClientOutputManager();
         executor.start();
         clientHandler = new ClientHandler(this);
-        responseListener = new MsgResponse();
+        responseListener = new MsgResponse(addrManager);
 
         connLocal = new Connection(name, addrLocal, name, NatTypeUtil.NatType.UNKNOWN.getValue());
     }
 
     private void startBootstrap() throws Exception {
+
+        int cpunum = Runtime.getRuntime().availableProcessors();
         bootstrap = new Bootstrap();
-        eventLoopGroup = new NioEventLoopGroup(2);
-        bootstrap.channel(NioDatagramChannel.class).group(eventLoopGroup);
-        bootstrap.option(ChannelOption.SO_BROADCAST, true).option(ChannelOption.SO_REUSEADDR, true)
-                .option(ChannelOption.SO_RCVBUF, Rudp.MTU_DEFUALT);
+        boolean epoll = Epoll.isAvailable();
+        if (epoll) {
+            bootstrap.option(EpollChannelOption.SO_REUSEPORT, true);
+        }
+        eventLoopGroup = epoll ? new EpollEventLoopGroup(cpunum) : new NioEventLoopGroup(cpunum);
+        Class<? extends Channel> chnCls = epoll ? EpollDatagramChannel.class : NioDatagramChannel.class;
+        bootstrap.channel(chnCls).group(eventLoopGroup);
+        bootstrap.option(ChannelOption.SO_BROADCAST,true).option(ChannelOption.SO_REUSEADDR,true)
+                .option(ChannelOption.RCVBUF_ALLOCATOR,new AdaptiveRecvByteBufAllocator(Rudp.HEAD_LEN,Rudp.MTU_DEFUALT,Rudp.MTU_DEFUALT));
 
         bootstrap.handler(clientHandler);
         channel = bootstrap.bind(PORT_3).sync().channel();
@@ -101,7 +117,7 @@ public class Client {
 
     private void initRudp() {
         //默认的server1,server2p1,server2p2的Connection
-        connServer1 = new Connection("unknown", new InetSocketAddress(HOST_SERVER1, PORT_1), "Server1", 0);
+        connServer1 = new Connection("unknown", addrServer1, "Server1", NatTypeUtil.NatType.UNKNOWN.getValue());
         //output需要Channel
         IOutput outputServer1 = new ClientOutput(channel, connServer1);
         outputManager.put(addrServer1, outputServer1);
@@ -109,10 +125,23 @@ public class Client {
         if (rudpPack == null) {
             rudpPack = new RudpPack(outputServer1, executor, responseListener);
             addrManager.New(addrServer1, rudpPack);
+            rudpPack.sendReset();
         }
-        rudpPack.sendReset();
+
         RudpScheduleTask task = new RudpScheduleTask(executor, rudpPack, addrManager);
         executor.executeTimerTask(task, rudpPack.getInterval());
+
+        connServer2p1 = new Connection("Server2P1",addrServer2p1,"Server2P1", NatTypeUtil.NatType.UNKNOWN.getValue());
+        IOutput outputServer2P1 = new ClientOutput(channel,connServer2p1);
+        outputManager.put(addrServer2p1,outputServer2P1);
+        RudpPack rudpPack2 = addrManager.get(addrServer2p1);
+        if (rudpPack == null){
+            rudpPack = new RudpPack(outputServer2P1,executor,responseListener);
+            addrManager.New(addrServer2p1,rudpPack);
+        }
+
+        RudpScheduleTask task1 = new RudpScheduleTask(executor,rudpPack2,addrManager);
+        executor.executeTimerTask(task1,rudpPack2.getInterval());
 
     }
 
@@ -123,6 +152,16 @@ public class Client {
         if (eventLoopGroup != null) {
             eventLoopGroup.shutdownGracefully();
         }
+    }
+
+    private InetSocketAddress getLocalIpAddr(){
+        try {
+            InetAddress addr = InetAddress.getLocalHost();
+            return new InetSocketAddress(addr,PORT_3);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private String getMacAddress() {

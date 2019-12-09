@@ -21,7 +21,16 @@ public class ThroughProcess {
     private static String TAG = ThroughProcess.class.getName();
     private Client client;
 
-    public ThroughProcess(Client client) {
+    private static ThroughProcess instance = null;
+    public static ThroughProcess getInstance(){
+        if (instance == null){
+            instance = new ThroughProcess();
+        }
+        return instance;
+    }
+    private ThroughProcess(){}
+
+    public void setClient(Client client) {
         this.client = client;
     }
 
@@ -81,7 +90,7 @@ public class ThroughProcess {
                     rudpPack = RudpPack.newInstance(output,client.getExecutor(),client.getResponseListener());
                     client.getAddrManager().New(to.getAddress(),rudpPack);
                 }
-                rudpPack.sendReset();
+
                 rudpPack.write(MessageUtil.throughmsg2Msg(throughTypeMsg));
 
                 //发送给Server端，表明正在建立连接
@@ -117,7 +126,7 @@ public class ThroughProcess {
                     rudpPack = RudpPack.newInstance(output,client.getExecutor(),client.getResponseListener());
                     client.getAddrManager().New(to.getAddress(),rudpPack);
                 }
-                rudpPack.sendReset();
+
                 rudpPack.write(MessageUtil.throughmsg2Msg(throughTypeMsg));
 
                 //让server给B转发，由B 再通信

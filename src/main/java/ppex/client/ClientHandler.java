@@ -32,7 +32,7 @@ public class ClientHandler extends SimpleChannelInboundHandler<DatagramPacket> {
         client.getOutputManager().put(packet.sender(), outputNew);
         rudpPack = new RudpPack(outputNew, client.getExecutor(), client.getResponseListener());
         client.getAddrManager().New(packet.sender(), rudpPack);
-        rudpPack.sendReset();
+
         RudpScheduleTask task = new RudpScheduleTask(client.getExecutor(), rudpPack, client.getAddrManager());
         client.getExecutor().executeTimerTask(task, rudpPack.getInterval());
     }
