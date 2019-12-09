@@ -21,7 +21,7 @@ public class ProbeTypeMsgHandler implements TypeMessageHandler {
 
     @Override
     public void handleTypeMessage(RudpPack rudpPack, IAddrManager addrManager, TypeMessage tmsg) {
-        LOGGER.info("ProbeTypeMsg handle:" + tmsg.toString());
+        System.out.println("ProbeTypeMsg handle:" + tmsg.toString());
         if (tmsg.getType() != TypeMessage.Type.MSG_TYPE_PROBE.ordinal())
             return;
         ProbeTypeMsg pmsg = JSON.parseObject(tmsg.getBody(), ProbeTypeMsg.class);
@@ -39,7 +39,7 @@ public class ProbeTypeMsgHandler implements TypeMessageHandler {
 
     //client端处理消息
     private void handleClientFromServer1Msg(ProbeTypeMsg msg) {
-        LOGGER.info("probe msg from server1:" + msg.toString());
+        System.out.println("client handle server1 msg:" + msg.toString());
         if (msg.getStep() == ProbeTypeMsg.Step.ONE.ordinal()) {
             if (msg.getFromInetSocketAddress().getHostString().equals(Client.getInstance().getAddrLocal()) && msg.getFromInetSocketAddress().getPort() == Client.getInstance().getPORT_1()) {
 //                DetectProcess.getInstance().isPublicNetwork = true;
@@ -61,6 +61,7 @@ public class ProbeTypeMsgHandler implements TypeMessageHandler {
     }
 
     private void handleClientFromServer2Port1Msg(ProbeTypeMsg msg) {
+        System.out.println("client handler server2p1 msg:" + msg.toString());
         if (msg.getStep() == ProbeTypeMsg.Step.ONE.ordinal()) {
         } else if (msg.getStep() == ProbeTypeMsg.Step.TWO.ordinal()) {
             DetectProcess.getInstance().setNAT_ADDRESS_FROM_S2P1(msg.getRecordInetSocketAddress());
