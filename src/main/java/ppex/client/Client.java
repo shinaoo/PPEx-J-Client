@@ -137,7 +137,7 @@ public class Client {
         RudpPack rudpPack2 = addrManager.get(addrServer2p1);
         if (rudpPack2 == null){
             rudpPack2 = new RudpPack(outputServer2P1,executor,responseListener);
-            addrManager.New(addrServer2p1,rudpPack);
+            addrManager.New(addrServer2p1,rudpPack2);
 //            rudpPack2.sendReset();
         }
 

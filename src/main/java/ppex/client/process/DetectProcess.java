@@ -57,11 +57,13 @@ public class DetectProcess {
         }
     }
 
-    public void finish(){
-        RudpPack rudpPack = client.getAddrManager().get(client.getAddrServer1());
-        rudpPack.sendFinish();
+    public void send2S1() throws Exception {
+        one_send2s1();
     }
 
+    public void send2S2P1()throws Exception {
+        two_send2s2p1();
+    }
     public NatTypeUtil.NatType getClientNATType(){
         //开始判断NAT类型
         if(isPublicNetwork){
