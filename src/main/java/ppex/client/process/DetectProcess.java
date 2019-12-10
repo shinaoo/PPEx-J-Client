@@ -51,7 +51,7 @@ public class DetectProcess {
     public void startDetect() {
         try {
             one_send2s1();
-//            two_send2s2p1();
+            two_send2s2p1();
         } catch (Exception e) {
             e.printStackTrace();
         }
