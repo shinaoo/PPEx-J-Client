@@ -31,8 +31,8 @@ public class Client {
 
     private static Logger LOGGER = Logger.getLogger(Client.class);
 
-    private String HOST_SERVER1 = "192.168.1.103";
-    private String HOST_SERVER2 = "192.168.1.103";
+    private String HOST_SERVER1 = "10.5.11.162";
+    private String HOST_SERVER2 = "10.5.11.55";
     private int PORT_1 = 9123;
     private int PORT_2 = 9124;
     private int PORT_3 = 9125;
@@ -125,7 +125,7 @@ public class Client {
         if (rudpPack == null) {
             rudpPack = new RudpPack(outputServer1, executor, responseListener);
             addrManager.New(addrServer1, rudpPack);
-            rudpPack.sendReset();
+//            rudpPack.sendReset();
         }
 
         RudpScheduleTask task = new RudpScheduleTask(executor, rudpPack, addrManager);
@@ -135,13 +135,14 @@ public class Client {
         IOutput outputServer2P1 = new ClientOutput(channel,connServer2p1);
         outputManager.put(addrServer2p1,outputServer2P1);
         RudpPack rudpPack2 = addrManager.get(addrServer2p1);
-        if (rudpPack == null){
-            rudpPack = new RudpPack(outputServer2P1,executor,responseListener);
+        if (rudpPack2 == null){
+            rudpPack2 = new RudpPack(outputServer2P1,executor,responseListener);
             addrManager.New(addrServer2p1,rudpPack);
+//            rudpPack2.sendReset();
         }
 
-        RudpScheduleTask task1 = new RudpScheduleTask(executor,rudpPack2,addrManager);
-        executor.executeTimerTask(task1,rudpPack2.getInterval());
+        RudpScheduleTask task2 = new RudpScheduleTask(executor,rudpPack2,addrManager);
+        executor.executeTimerTask(task2,rudpPack2.getInterval());
 
     }
 

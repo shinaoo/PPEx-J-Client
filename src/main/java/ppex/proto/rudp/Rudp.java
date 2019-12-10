@@ -116,16 +116,16 @@ public class Rudp {
         return 0;
     }
 
-    public void sendReset() {
-        Frg frg = Frg.createFrg(byteBufAllocator, 0);
-        frg.cmd = CMD_RESET;
-        frg.tot = 0;
-        frg.msgid = -1;
-        queue_snd.add(frg);
-        snd_nxt = 0;
-        snd_una = snd_nxt;
-        rcv_nxt = 0;
-    }
+//    public void sendReset() {
+//        Frg frg = Frg.createFrg(byteBufAllocator, 0);
+//        frg.cmd = CMD_RESET;
+//        frg.tot = 0;
+//        frg.msgid = -1;
+//        queue_snd.add(frg);
+//        snd_nxt = 0;
+//        snd_una = snd_nxt;
+//        rcv_nxt = 0;
+//    }
 
     public void sendFinish() {
         Frg frg = Frg.createFrg(byteBufAllocator, 0);
@@ -187,7 +187,6 @@ public class Rudp {
                 if (frg.data.readableBytes() > 0) {
                     flushbuf.writeBytes(frg.data, frg.data.readerIndex(), frg.data.readableBytes());
                 }
-                System.out.println("output snd ack size:" + queue_sndack.size() + " frg.sn:" + frg.sn + " thread:" + Thread.currentThread().getName() + " hash:" + this.hashCode());
                 output(flushbuf, frg.sn);
             }
         }
@@ -336,7 +335,6 @@ public class Rudp {
                 break;
             }
         }
-        System.out.println("------------------------------->>>>> acK:" + sn +  " queue_sndack size:" + queue_sndack.size() + " thread:" + Thread.currentThread().getName());
     }
 
     private void affirmFastAck(long sn, long ts) {
@@ -420,8 +418,10 @@ public class Rudp {
         for (Iterator<Frg> itr = queue_rcv_order.iterator(); itr.hasNext(); ) {
             Frg frg = itr.next();
             itr.remove();
-            buf.writeBytes(frg.data);
-            frg.data.release();
+            if (frg.data != null) {
+                buf.writeBytes(frg.data);
+                frg.data.release();
+            }
             if (frg.tot == 0)
                 break;
         }
@@ -477,7 +477,6 @@ public class Rudp {
         queue_sndack.clear();
         queue_rcv_order.clear();
         queue_rcv_shambles.clear();
-        System.out.println("reset shamles size:" + queue_rcv_shambles.size());
     }
 
     public void release() {

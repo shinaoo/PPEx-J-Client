@@ -35,7 +35,7 @@ public class ClientTest {
         detectProcess.setClient(client);
         detectProcess.startDetect();
         TimeUnit.SECONDS.sleep(2);
-        detectProcess.startDetect();
+//        detectProcess.startDetect();
         TimeUnit.SECONDS.sleep(2);
     }
 

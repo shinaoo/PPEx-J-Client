@@ -58,9 +58,9 @@ public class RudpPack {
     /**
      * 该方法是Client端使用,Server不用
      */
-    public void sendReset() {
-        rudp.sendReset();
-    }
+//    public void sendReset() {
+//        rudp.sendReset();
+//    }
 
     public void sendFinish(){
         rudp.sendFinish();
@@ -148,6 +148,10 @@ public class RudpPack {
 
     public IOutput getOutput() {
         return output;
+    }
+
+    public Rudp getRudp() {
+        return rudp;
     }
 
     public static RudpPack newInstance(IOutput output, IThreadExecute executor, ResponseListener responseListener) {
