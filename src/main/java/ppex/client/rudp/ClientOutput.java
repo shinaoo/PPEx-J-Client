@@ -40,7 +40,6 @@ public class ClientOutput implements IOutput {
             ChannelFuture fu = channel.writeAndFlush(packet);
             fu.addListener(future -> {
                 if (future.isSuccess()) {
-                    System.out.println("channel writeandflush succ" + sn);
                 } else {
                     System.out.println("channel writeandflush failed");
                     future.cause().printStackTrace();

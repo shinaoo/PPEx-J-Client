@@ -147,6 +147,8 @@ public class Client {
     }
 
     private void stop() {
+        System.out.println("stop is run");
+        addrManager.getAll().forEach(rudpPack -> rudpPack.sendFinish());
         if (executor != null) {
             executor.stop();
         }

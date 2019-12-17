@@ -5,6 +5,7 @@ import org.junit.Before;
 import org.junit.Test;
 import ppex.client.Client;
 import ppex.client.process.DetectProcess;
+import ppex.proto.msg.type.ProbeTypeMsg;
 
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
@@ -55,8 +56,10 @@ public class ClientTest {
         TimeUnit.SECONDS.sleep(3);
     }
 
-    public void startDetect2S2P2() throws Exception {
+    @Test
+    public void startDetectServer12S2P2() throws Exception {
         //模拟s1或者S2P1给S2p2发送信息
+
 
     }
 

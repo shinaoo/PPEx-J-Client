@@ -48,8 +48,8 @@ public class ProbeTypeMsgHandler implements TypeMessageHandler {
                 DetectProcess.getInstance().setNAT_ADDRESS_FROM_S1(msg.getRecordInetSocketAddress());
                 Client.getInstance().setAddrLocal(msg.getRecordInetSocketAddress());
             }
-            //todo 与第二阶段的返回的信息相比较。这里需要做一个顺序先后。与handleClientFromS2P1Msg做比较
-            //todo 上面的这个信息比较做的不对.后面等待时间后再统一做比较
+            //todo 2019.11.08与第二阶段的返回的信息相比较。这里需要做一个顺序先后。与handleClientFromS2P1Msg做比较
+            //todo 2019.12.16上面的这个信息比较做的不对.后面等待时间后再统一做比较
 //            if (DetectProcess.getInstance().getNAT_ADDRESS_FROM_S2P1() != null) {
 //                if (DetectProcess.getInstance().getNAT_ADDRESS_FROM_S1().equals(DetectProcess.getInstance().getNAT_ADDRESS_FROM_S2P1())) {
 //                    DetectProcess.getInstance().setNAT_ADDRESS_SAME(true);
@@ -69,6 +69,7 @@ public class ProbeTypeMsgHandler implements TypeMessageHandler {
     }
 
     private void handleClientFromServer2Port2Msg(ProbeTypeMsg msg) {
+        System.out.println("client handler server2p2 msg:" + msg.toString());
         if (msg.getStep() == ProbeTypeMsg.Step.ONE.ordinal()) {
             DetectProcess.getInstance().setOne_from_server2p2(true);
         } else if (msg.getStep() == ProbeTypeMsg.Step.TWO.ordinal()) {

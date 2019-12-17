@@ -5,8 +5,10 @@ import io.netty.buffer.ByteBufAllocator;
 import ppex.proto.msg.Message;
 import ppex.utils.MessageUtil;
 
+import java.util.Collections;
 import java.util.Iterator;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.LinkedList;
+import java.util.List;
 
 public class Rudp {
 
@@ -28,7 +30,7 @@ public class Rudp {
     public static final int TELL_WIN = 2;
 
     //超过次数重传就认为连接断开
-    public static final int DEAD_LINK = 10;
+    public static final int DEAD_LINK = 20;
     //头部数据长度
     public static int HEAD_LEN = 45;
     //MTU
@@ -64,13 +66,13 @@ public class Rudp {
     //表示有几个等待ack的数量
     private int ackcount = 0;
     //等待发送的数据
-    private ConcurrentLinkedQueue<Frg> queue_snd = new ConcurrentLinkedQueue<>();
+    private List<Frg> queue_snd = new LinkedList<>();
     //发送后等待确认数据,与上面queue_snd对应下来
-    private ConcurrentLinkedQueue<Frg> queue_sndack = new ConcurrentLinkedQueue<>();
+    private List<Frg> queue_sndack = new LinkedList<>();
     //收到有序的消息队列
-    private ConcurrentLinkedQueue<Frg> queue_rcv_order = new ConcurrentLinkedQueue<>();
+    private List<Frg> queue_rcv_order = new LinkedList<>();
     //收到无序的消息队列
-    private ConcurrentLinkedQueue<Frg> queue_rcv_shambles = new ConcurrentLinkedQueue<>();
+    private List<Frg> queue_rcv_shambles = new LinkedList<>();
 
     //开始的时间戳
     private long startTicks = System.currentTimeMillis();
@@ -87,6 +89,10 @@ public class Rudp {
 
     public Rudp(IOutput output) {
         this.output = output;
+        queue_snd = Collections.synchronizedList(queue_snd);
+        queue_sndack = Collections.synchronizedList(queue_sndack);
+        queue_rcv_order = Collections.synchronizedList(queue_rcv_order);
+        queue_rcv_shambles = Collections.synchronizedList(queue_rcv_shambles);
     }
 
     public int send(ByteBuf buf, long msgid) {
@@ -146,14 +152,16 @@ public class Rudp {
         //发送是先将queue_snd里面的数据发送
 
         int wnd_count = Math.min(wnd_snd, wnd_rmt);                      //后面加入请求server端窗口数量来控制拥塞
-        while (itimediff(snd_nxt, snd_una + wnd_count) < 0) {    //这里控制数量输入，即是窗口的数量控制好了
-            Frg frg = queue_snd.poll();
-            if (frg == null)
-                break;
-            frg.cmd = CMD_PUSH;
-            frg.sn = snd_nxt;
-            queue_sndack.add(frg);
-            snd_nxt++;
+        if (!queue_snd.isEmpty()) {
+            while (itimediff(snd_nxt, snd_una + wnd_count) < 0 && !queue_snd.isEmpty()) {    //这里控制数量输入，即是窗口的数量控制好了
+                Frg frg = queue_snd.remove(0);
+                if (frg == null)
+                    break;
+                frg.cmd = CMD_PUSH;
+                frg.sn = snd_nxt;
+                queue_sndack.add(frg);
+                snd_nxt++;
+            }
         }
         for (Iterator<Frg> itr = queue_sndack.iterator(); itr.hasNext(); ) {
             Frg frg = itr.next();
@@ -177,6 +185,7 @@ public class Rudp {
                 frg.xmit++;
                 if (frg.xmit >= deadLink) {
                     //todo 连接已断开
+                    stop = true;
                 }
                 frg.ts = current;
                 frg.wnd = wndUnuse();
@@ -186,6 +195,7 @@ public class Rudp {
                 if (frg.data.readableBytes() > 0) {
                     flushbuf.writeBytes(frg.data, frg.data.readerIndex(), frg.data.readableBytes());
                 }
+                System.out.println(this.hashCode() + " thread: " + Thread.currentThread().getName() + " output sn:" + frg.sn + " address:" + this.output.getConn().getAddress());
                 output(flushbuf, frg.sn);
             }
         }
@@ -264,7 +274,8 @@ public class Rudp {
                 case CMD_PUSH:
                     //首先判断是否超过窗口
                     //之前增加了cmd_reset之后,逻辑更加混乱,这里设置每当收到sn为0之后,都认为是一个新的开始.设置时间间隔超过1秒才算新的sn0
-                    if (sn == 0 && itimediff(ts,zeroSnTimeStamp) > 1000) {
+                    //todo 现在还有一个问题是,当一端断开之后,另一端不知道,这样的话,当断开的一端重新连接后,另一端没有断开的sn与rcv等都不对.所以需要一个结束的发送
+                    if (sn == 0 && itimediff(ts, zeroSnTimeStamp) > 1000) {
                         reset();
                         zeroSnTimeStamp = ts;
                     }
@@ -298,10 +309,8 @@ public class Rudp {
                     }
                     break;
                 case CMD_FINISH:
-                    if (itimediff(sn, rcv_nxt + wnd_rcv) < 0) {
-                        flushAck(sn, ts, msgid);
-                        stop = true;
-                    }
+                    System.out.println(this.hashCode() + " thread:" + Thread.currentThread().getName() + " rcv finish " + this.output.getConn().getAddress());
+                    stop = true;
                     break;
             }
         }
@@ -321,7 +330,7 @@ public class Rudp {
 
     private void shrinkBuf() {
         if (queue_sndack.size() > 0) {
-            Frg frg = queue_sndack.peek();
+            Frg frg = queue_sndack.get(0);
             snd_una = frg.sn;
         } else {
             snd_una = snd_nxt;
@@ -329,6 +338,7 @@ public class Rudp {
     }
 
     private void affirmAck(long sn) {
+        System.out.println(this.hashCode() + "affirm sn:" + sn + " address:" + this.output.getConn().getAddress());
         if (itimediff(sn, snd_una) < 0 || itimediff(sn, snd_nxt) >= 0) {
             return;
         }
@@ -372,6 +382,7 @@ public class Rudp {
 
     private void parseRcvData(Frg frg) {
         long sn = frg.sn;
+        System.out.println(this.hashCode() + " thread: " + Thread.currentThread().getName() + " rcv sn:" + frg.sn);
         if (itimediff(sn, rcv_nxt + wnd_rcv) >= 0 || itimediff(sn, rcv_nxt) < 0) {
             return;
         }
@@ -419,6 +430,9 @@ public class Rudp {
         for (Iterator<Frg> itr = queue_rcv_order.iterator(); itr.hasNext(); ) {
             Frg frg = itr.next();
             itr.remove();
+            if (buf.readableBytes() == len && frg.tot == 0) {
+                break;
+            }
             buf.writeBytes(frg.data);
             if (frg.tot == 0) {
                 break;
@@ -434,15 +448,20 @@ public class Rudp {
     public int lenOfByteBuf() {
         if (queue_rcv_order.isEmpty())
             return -1;
-        Frg frg = queue_rcv_order.peek();
+        Frg frg = queue_rcv_order.get(0);
         if (frg.tot == 0) {
             return frg.data.readableBytes();
         }
         if (queue_rcv_order.size() < frg.tot + 1)
             return -1;
+        //用msgid保证是同一个msg的长度
+        long msgid = queue_rcv_order.get(0).msgid;
         int len = 0;
         for (Iterator<Frg> itr = queue_rcv_order.iterator(); itr.hasNext(); ) {
             Frg f = itr.next();
+            if (msgid != f.msgid) {
+                continue;
+            }
             len += f.data.readableBytes();
             if (f.tot == 0)
                 break;
@@ -457,7 +476,7 @@ public class Rudp {
     public boolean canRcv() {
         if (queue_rcv_order.isEmpty())
             return false;
-        Frg frg = queue_rcv_order.peek();
+        Frg frg = queue_rcv_order.get(0);
         if (frg.tot == 0)
             return true;
         if (queue_rcv_order.size() < frg.tot + 1) {
@@ -480,20 +499,20 @@ public class Rudp {
 
     public void release() {
         queue_rcv_order.forEach(frg -> frg.recycler(true));
-//        queue_rcv_shambles.forEach(frg -> frg.recycler(true));
+        queue_rcv_shambles.forEach(frg -> frg.recycler(true));
         queue_snd.forEach(frg -> frg.recycler(true));
         queue_sndack.forEach(frg -> frg.recycler(true));
     }
 
-    public ConcurrentLinkedQueue<Frg> getQueue_snd() {
+    public List<Frg> getQueue_snd() {
         return queue_snd;
     }
 
-    public ConcurrentLinkedQueue<Frg> getQueue_rcv_order() {
+    public List<Frg> getQueue_rcv_order() {
         return queue_rcv_order;
     }
 
-    public ConcurrentLinkedQueue<Frg> getQueue_rcv_shambles() {
+    public List<Frg> getQueue_rcv_shambles() {
         return queue_rcv_shambles;
     }
 
