@@ -6,6 +6,7 @@ import org.junit.Test;
 import ppex.client.Client;
 import ppex.client.process.DetectProcess;
 import ppex.proto.msg.type.ProbeTypeMsg;
+import ppex.utils.NatTypeUtil;
 
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
@@ -38,6 +39,7 @@ public class ClientTest {
         TimeUnit.SECONDS.sleep(2);
 //        detectProcess.startDetect();
         TimeUnit.SECONDS.sleep(2);
+        System.out.println("nattype:" + NatTypeUtil.NatType.getByValue(detectProcess.getClientNATType().getValue()));
     }
 
     @Test

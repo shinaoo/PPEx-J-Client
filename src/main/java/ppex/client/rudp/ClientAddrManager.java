@@ -6,6 +6,7 @@ import ppex.proto.rudp.RudpPack;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ClientAddrManager implements IAddrManager {
@@ -31,5 +32,10 @@ public class ClientAddrManager implements IAddrManager {
     @Override
     public Collection<RudpPack> getAll() {
         return rudppacks.values();
+    }
+
+    @Override
+    public Set<Map.Entry<InetSocketAddress, RudpPack>> getAllEntry() {
+        return rudppacks.entrySet();
     }
 }

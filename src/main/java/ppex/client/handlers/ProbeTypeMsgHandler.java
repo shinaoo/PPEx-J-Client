@@ -60,7 +60,7 @@ public class ProbeTypeMsgHandler implements TypeMessageHandler {
         }
     }
 
-    private void handleClientFromServer2Port1Msg(ProbeTypeMsg msg) {
+    private synchronized void handleClientFromServer2Port1Msg(ProbeTypeMsg msg) {
         System.out.println("client handler server2p1 msg:" + msg.toString());
         if (msg.getStep() == ProbeTypeMsg.Step.ONE.ordinal()) {
         } else if (msg.getStep() == ProbeTypeMsg.Step.TWO.ordinal()) {
@@ -68,7 +68,7 @@ public class ProbeTypeMsgHandler implements TypeMessageHandler {
         }
     }
 
-    private void handleClientFromServer2Port2Msg(ProbeTypeMsg msg) {
+    private synchronized void handleClientFromServer2Port2Msg(ProbeTypeMsg msg) {
         System.out.println("client handler server2p2 msg:" + msg.toString());
         if (msg.getStep() == ProbeTypeMsg.Step.ONE.ordinal()) {
             DetectProcess.getInstance().setOne_from_server2p2(true);

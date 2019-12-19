@@ -39,7 +39,6 @@ public class RudpScheduleTask implements ITask {
                 Client.getInstance().getOutputManager().del(rudpPack.getOutput().getConn().getAddress());
                 addrManager.Del(rudpPack);
                 rudpPack = null;
-                System.out.println("ScheduleTask rudp dead.not active");
                 return;
             }
             if (rudpPack.isStop()){
@@ -47,7 +46,6 @@ public class RudpScheduleTask implements ITask {
                 Client.getInstance().getOutputManager().del(rudpPack.getOutput().getConn().getAddress());
                 addrManager.Del(rudpPack);
                 rudpPack = null;
-                System.out.println("ScheduleTask rudp stop.");
                 return;
             }
             //这个Next时间要看后面得到的时间长短来确定
