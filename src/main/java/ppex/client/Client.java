@@ -154,7 +154,6 @@ public class Client {
     }
 
     public void startTestClient() {
-            LOGGER.info("start test client");
         try {
             initParam();
             startBootstrap();

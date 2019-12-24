@@ -166,7 +166,7 @@ public class RudpPack {
         return rudp;
     }
 
-    public static RudpPack newInstance(IOutput output, IThreadExecute executor, ResponseListener responseListener,IAddrManager addrManager) {
+    public static RudpPack newInstance(IOutput output, IThreadExecute executor, ResponseListener responseListener, IAddrManager addrManager) {
         RudpPack rudpPack = new RudpPack(output,executor,responseListener);
 //        RudpScheduleTask scheduleTask = new RudpScheduleTask(executor, rudpPack, addrManager);
 //        executor.executeTimerTask(scheduleTask, rudpPack.getInterval());
@@ -194,6 +194,9 @@ public class RudpPack {
         this.rudp2.snd(msg);
     }
 
+    public void mvChkFromSnd2SndAck(){
+        this.rudp2.mvChkFromSnd2SndAck();
+    }
     public void rcv2(ByteBuf buf){
         ByteBuf bufTmp = bufAllocator.buffer(buf.readableBytes());
         bufTmp.writeBytes(buf);

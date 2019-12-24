@@ -25,7 +25,6 @@ public class ScheduleTask implements ITask {
     @Override
     public void execute() {
         try {
-            LOGGER.info("ScheduleTask run..........");
             long now = System.currentTimeMillis();
             if (now - rudpPack.getTimeout() > rudpPack.getLasRcvTime()) {
                 rudpPack.close();
