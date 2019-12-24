@@ -22,7 +22,7 @@ public class ClientHandler extends SimpleChannelInboundHandler<DatagramPacket> {
         System.out.println("read from :" + packet.sender());
         RudpPack rudpPack = client.getAddrManager().get(packet.sender());
         if (rudpPack != null) {
-            client.getOutputManager().get(packet.sender()).update(channelHandlerContext.channel());
+            rudpPack.getOutput().update(channelHandlerContext.channel());
             rudpPack.rcv2(packet.content());
             return;
         }

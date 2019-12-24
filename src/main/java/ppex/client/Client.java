@@ -11,7 +11,8 @@ import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ppex.client.rudp.ClientAddrManager;
 import ppex.client.rudp.ClientOutput;
 import ppex.client.rudp.ClientOutputManager;
@@ -19,6 +20,7 @@ import ppex.client.rudp.MsgResponse;
 import ppex.proto.entity.Connection;
 import ppex.proto.msg.type.TxtTypeMsg;
 import ppex.proto.rudp.*;
+import ppex.proto.rudp2.ScheduleTask;
 import ppex.proto.tpool.IThreadExecute;
 import ppex.proto.tpool.ThreadExecute;
 import ppex.utils.MessageUtil;
@@ -29,7 +31,7 @@ import java.util.Enumeration;
 
 public class Client {
 
-    private static Logger LOGGER = Logger.getLogger(Client.class);
+     private static Logger LOGGER = LoggerFactory.getLogger(Client.class);
 
 //    private String HOST_SERVER1 = "10.5.11.162";
     private String HOST_SERVER1 = "192.168.1.100";
@@ -117,6 +119,7 @@ public class Client {
 
         bootstrap.handler(clientHandler);
         channel = bootstrap.bind(PORT_3).sync().channel();
+
     }
 
     private void initRudp() {
@@ -151,6 +154,7 @@ public class Client {
     }
 
     public void startTestClient() {
+            LOGGER.info("start test client");
         try {
             initParam();
             startBootstrap();
@@ -170,6 +174,7 @@ public class Client {
     }
 
     public void sendTestRudp2(){
+
         TxtTypeMsg msg = new TxtTypeMsg();
         msg.setContent("this is from client");
         msg.setFrom(new InetSocketAddress("127.0.0.1", PORT_3));

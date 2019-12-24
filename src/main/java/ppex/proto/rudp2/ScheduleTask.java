@@ -1,12 +1,16 @@
 package ppex.proto.rudp2;
 
 import io.netty.util.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ppex.proto.rudp.IAddrManager;
 import ppex.proto.rudp.RudpPack;
 import ppex.proto.tpool.ITask;
 import ppex.proto.tpool.IThreadExecute;
 
 public class ScheduleTask implements ITask {
+
+    private static Logger LOGGER = LoggerFactory.getLogger(ScheduleTask.class);
 
     private IThreadExecute executor;
     private RudpPack rudpPack;
@@ -21,6 +25,7 @@ public class ScheduleTask implements ITask {
     @Override
     public void execute() {
         try {
+            LOGGER.info("ScheduleTask run..........");
             long now = System.currentTimeMillis();
             if (now - rudpPack.getTimeout() > rudpPack.getLasRcvTime()) {
                 rudpPack.close();

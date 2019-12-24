@@ -80,6 +80,7 @@ public class ClientTest {
     @Test
     public void Rudp2Test() throws Exception {
         client.sendTestRudp2();
+        TimeUnit.SECONDS.sleep(5);
     }
 
 }
