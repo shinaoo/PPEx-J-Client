@@ -42,9 +42,6 @@ public class ScheduleTask implements ITask {
             if (!rudpPack.getQueue_snd().isEmpty()) {
                 rudpPack.notifySndTask2();
             }
-            if (rudpPack.canRcv2() != -1) {
-                rudpPack.notifyRcvTask2();
-            }
 
         } catch (Exception e) {
             e.printStackTrace();

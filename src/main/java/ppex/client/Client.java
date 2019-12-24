@@ -31,7 +31,8 @@ public class Client {
 
     private static Logger LOGGER = Logger.getLogger(Client.class);
 
-    private String HOST_SERVER1 = "10.5.11.162";
+//    private String HOST_SERVER1 = "10.5.11.162";
+    private String HOST_SERVER1 = "192.168.1.100";
     private String HOST_SERVER2 = "10.5.11.55";
     private int PORT_1 = 9123;
     private int PORT_2 = 9124;
@@ -131,8 +132,8 @@ public class Client {
 //            rudpPack.sendReset();
         }
 
-        RudpScheduleTask task = new RudpScheduleTask(executor, rudpPack, addrManager);
-        executor.executeTimerTask(task, rudpPack.getInterval());
+//        RudpScheduleTask task = new RudpScheduleTask(executor, rudpPack, addrManager);
+//        executor.executeTimerTask(task, rudpPack.getInterval());
 
         connServer2p1 = new Connection("Server2P1", addrServer2p1, "Server2P1", NatTypeUtil.NatType.UNKNOWN.getValue());
         IOutput outputServer2P1 = new ClientOutput(channel, connServer2p1);
@@ -144,8 +145,8 @@ public class Client {
 //            rudpPack2.sendReset();
         }
 
-        RudpScheduleTask task2 = new RudpScheduleTask(executor, rudpPack2, addrManager);
-        executor.executeTimerTask(task2, rudpPack2.getInterval());
+//        RudpScheduleTask task2 = new RudpScheduleTask(executor, rudpPack2, addrManager);
+//        executor.executeTimerTask(task2, rudpPack2.getInterval());
 
     }
 
@@ -153,6 +154,15 @@ public class Client {
         try {
             initParam();
             startBootstrap();
+            connServer1 = new Connection("unknown", addrServer1, "Server1", NatTypeUtil.NatType.UNKNOWN.getValue());
+            //output需要Channel
+            IOutput outputServer1 = new ClientOutput(channel, connServer1);
+            RudpPack rudpPack = addrManager.get(addrServer1);
+            if (rudpPack == null) {
+                rudpPack = RudpPack.newInstance(outputServer1, executor, responseListener,addrManager);
+                addrManager.New(addrServer1, rudpPack);
+//            rudpPack.sendReset();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -170,7 +180,7 @@ public class Client {
 
     private void stop() {
         System.out.println("stop is run");
-        addrManager.getAll().forEach(rudpPack -> rudpPack.sendFinish());
+//        addrManager.getAll().forEach(rudpPack -> rudpPack.sendFinish());
         if (executor != null) {
             executor.stop();
         }
