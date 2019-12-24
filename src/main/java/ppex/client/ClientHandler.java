@@ -23,18 +23,19 @@ public class ClientHandler extends SimpleChannelInboundHandler<DatagramPacket> {
         RudpPack rudpPack = client.getAddrManager().get(packet.sender());
         if (rudpPack != null) {
             client.getOutputManager().get(packet.sender()).update(channelHandlerContext.channel());
-            rudpPack.read(packet.content());
+            rudpPack.rcv2(packet.content());
             return;
         }
         Connection connNew = new Connection("unknown", packet.sender(), "unknown", 0);
         //output需要Channel
         IOutput outputNew = new ClientOutput(channelHandlerContext.channel(), connNew);
-        client.getOutputManager().put(packet.sender(), outputNew);
-        rudpPack = new RudpPack(outputNew, client.getExecutor(), client.getResponseListener());
+//        client.getOutputManager().put(packet.sender(), outputNew);
+//        rudpPack = new RudpPack(outputNew, client.getExecutor(), client.getResponseListener());
+        rudpPack = RudpPack.newInstance(outputNew,client.getExecutor(),client.getResponseListener(),client.getAddrManager());
         client.getAddrManager().New(packet.sender(), rudpPack);
-        rudpPack.read(packet.content());
-        RudpScheduleTask task = new RudpScheduleTask(client.getExecutor(), rudpPack, client.getAddrManager());
-        client.getExecutor().executeTimerTask(task, rudpPack.getInterval());
+        rudpPack.rcv2(packet.content());
+//        RudpScheduleTask task = new RudpScheduleTask(client.getExecutor(), rudpPack, client.getAddrManager());
+//        client.getExecutor().executeTimerTask(task, rudpPack.getInterval());
     }
 
     @Override

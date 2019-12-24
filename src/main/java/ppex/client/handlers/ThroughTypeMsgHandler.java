@@ -77,7 +77,7 @@ public class ThroughTypeMsgHandler implements TypeMessageHandler {
             ThroughTypeMsg ttmsg = new ThroughTypeMsg();
             ttmsg.setAction(ThroughTypeMsg.ACTION.CONNECT_CONN.ordinal());
             if (connect.getType() == Connect.TYPE.HOLE_PUNCH.ordinal()){
-                connect.setType(Connect.TYPE.CONNECT_PING.ordinal());
+                connect.setType(Connect.TYPE.CONNECT_PING_NORMAL.ordinal());
                 ttmsg.setContent(JSON.toJSONString(connect));
 
                 Channel channel = rudpPack.getOutput().getChannel();
@@ -98,7 +98,7 @@ public class ThroughTypeMsgHandler implements TypeMessageHandler {
                 rudpPack.write(MessageUtil.throughmsg2Msg(ttmsg));
             }else if (connect.getType() == Connect.TYPE.RETURN_HOLE_PUNCH.ordinal()){
                 //开始给B 发ping消息
-                connect.setType(Connect.TYPE.CONNECT_PING.ordinal());
+                connect.setType(Connect.TYPE.CONNECT_PING_NORMAL.ordinal());
                 ttmsg.setContent(JSON.toJSONString(connect));
                 Channel channel = rudpPack.getOutput().getChannel();
                 rudpPack = addrManager.get(connections.get(1).getAddress());
@@ -112,7 +112,7 @@ public class ThroughTypeMsgHandler implements TypeMessageHandler {
                 }
                 rudpPack.write(MessageUtil.throughmsg2Msg(ttmsg));
             }else if (connect.getType() == Connect.TYPE.REVERSE.ordinal()){
-                connect.setType(Connect.TYPE.CONNECT_PING.ordinal());
+                connect.setType(Connect.TYPE.CONNECT_PING_REVERSE.ordinal());
                 ttmsg.setContent(JSON.toJSONString(connect));
                 Channel channel = rudpPack.getOutput().getChannel();
                 rudpPack = addrManager.get(connections.get(0).getAddress());
@@ -146,7 +146,7 @@ public class ThroughTypeMsgHandler implements TypeMessageHandler {
 
     private void handleConnecCONN(ThroughTypeMsg ttmsg,RudpPack rudpPack,IAddrManager addrManager) throws Exception{
         Connect connect = JSON.parseObject(ttmsg.getContent(),Connect.class);
-        if (connect.getType() == Connect.TYPE.CONNECT_PING.ordinal()){
+        if (connect.getType() == Connect.TYPE.CONNECT_PING_NORMAL.ordinal()){
             connect.setType(Connect.TYPE.CONNECT_PONG.ordinal());
             ttmsg.setContent(JSON.toJSONString(connect));
 

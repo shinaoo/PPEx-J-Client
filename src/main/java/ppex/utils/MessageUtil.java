@@ -1,24 +1,13 @@
 package ppex.utils;
 
 import com.alibaba.fastjson.JSON;
-
-import java.net.InetSocketAddress;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.*;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
 import ppex.proto.msg.Message;
-import ppex.proto.msg.type.FileTypeMsg;
-import ppex.proto.msg.type.PingTypeMsg;
-import ppex.proto.msg.type.PongTypeMsg;
-import ppex.proto.msg.type.ProbeTypeMsg;
-import ppex.proto.msg.type.ThroughTypeMsg;
-import ppex.proto.msg.type.TxtTypeMsg;
-import ppex.proto.msg.type.TypeMessage;
+import ppex.proto.msg.type.*;
+
+import java.net.InetSocketAddress;
 
 public class MessageUtil {
 
@@ -29,6 +18,7 @@ public class MessageUtil {
     public static ByteBuf msg2ByteBuf(Message msg) {
         ByteBufAllocator allocator = PooledByteBufAllocator.DEFAULT;
         ByteBuf msgBuf = allocator.ioBuffer(msg.getLength() + Message.VERSIONLENGTH + Message.CONTENTLENGTH + 1);
+//        msgBuf.writeLongLE(msg.getMsgid());
         msgBuf.writeLong(msg.getMsgid());
         msgBuf.writeByte(msg.getVersion());
         msgBuf.writeInt(msg.getLength());
@@ -43,7 +33,7 @@ public class MessageUtil {
         }
         long msgid = byteBuf.readLong();
         byte version = byteBuf.readByte();
-        if (version != 1) {
+        if (version != Constants.MSG_VERSION) {
             return null;
         }
         int length = byteBuf.readInt();
@@ -76,7 +66,7 @@ public class MessageUtil {
     }
 
     public static DatagramPacket msg2Packet(Message message, String host, int port) {
-        return new DatagramPacket(msg2ByteBuf(message),new InetSocketAddress(host,port));
+        return new DatagramPacket(msg2ByteBuf(message), new InetSocketAddress(host, port));
     }
 
     public static DatagramPacket typemsg2Packet(TypeMessage typeMessage, InetSocketAddress inetSocketAddress) {
@@ -86,7 +76,7 @@ public class MessageUtil {
     }
 
     public static DatagramPacket typemsg2Packet(TypeMessage typeMessage, String host, int port) {
-        return typemsg2Packet(typeMessage, new InetSocketAddress(host,port));
+        return typemsg2Packet(typeMessage, new InetSocketAddress(host, port));
     }
 
     public static DatagramPacket probemsg2Packet(ProbeTypeMsg msg, InetSocketAddress address) {
@@ -97,7 +87,7 @@ public class MessageUtil {
     }
 
     public static DatagramPacket probemsg2Packet(ProbeTypeMsg probeTypeMsg, String host, int port) {
-        return probemsg2Packet(probeTypeMsg, new InetSocketAddress(host,port));
+        return probemsg2Packet(probeTypeMsg, new InetSocketAddress(host, port));
     }
 
 
@@ -109,7 +99,7 @@ public class MessageUtil {
     }
 
     public static DatagramPacket throughmsg2Packet(ThroughTypeMsg msg, String host, int port) {
-        return throughmsg2Packet(msg, new InetSocketAddress(host,port));
+        return throughmsg2Packet(msg, new InetSocketAddress(host, port));
     }
 
     public static DatagramPacket pingMsg2Packet(PingTypeMsg msg, InetSocketAddress address) {
@@ -120,11 +110,11 @@ public class MessageUtil {
     }
 
     public static DatagramPacket pingMsg2Packet(PingTypeMsg msg, String host, int port) {
-        return pingMsg2Packet(msg, new InetSocketAddress(host,port));
+        return pingMsg2Packet(msg, new InetSocketAddress(host, port));
     }
 
     public static DatagramPacket pongMsg2Packet(PongTypeMsg msg, String host, int port) {
-        return pongMsg2Packet(msg, new InetSocketAddress(host,port));
+        return pongMsg2Packet(msg, new InetSocketAddress(host, port));
     }
 
     public static DatagramPacket pongMsg2Packet(PongTypeMsg msg, InetSocketAddress address) {
@@ -281,15 +271,6 @@ public class MessageUtil {
         return msg;
     }
 
-    public static Message pingMsg2Msg(PingTypeMsg pingTypeMsg){
-        TypeMessage typeMessage = new TypeMessage();
-        typeMessage.setType(TypeMessage.Type.MSG_TYPE_HEART_PING.ordinal());
-        typeMessage.setBody(JSON.toJSONString(pingTypeMsg));
-        Message msg = new Message(LongIDUtil.getCurrentId());
-        msg.setContent(typeMessage);
-        return msg;
-    }
-
     public static Message probemsg2Msg(ProbeTypeMsg probeTypeMsg) {
         TypeMessage typeMessage = new TypeMessage();
         typeMessage.setType(TypeMessage.Type.MSG_TYPE_PROBE.ordinal());
@@ -299,7 +280,7 @@ public class MessageUtil {
         return msg;
     }
 
-    public static Message throughmsg2Msg(ThroughTypeMsg tmsg){
+    public static Message throughmsg2Msg(ThroughTypeMsg tmsg) {
         TypeMessage typeMessage = new TypeMessage();
         typeMessage.setType(TypeMessage.Type.MSG_TYPE_THROUGH.ordinal());
         typeMessage.setBody(JSON.toJSONString(tmsg));
@@ -313,7 +294,7 @@ public class MessageUtil {
      * ----------------------------------------------生成探测ProbeTypeMsg部分----------------------------------------------------
      */
     public static ProbeTypeMsg makeClientStepOneProbeTypeMsg(String host, int port) {
-        return makeClientStepOneProbeTypeMsg(new InetSocketAddress(host,port));
+        return makeClientStepOneProbeTypeMsg(new InetSocketAddress(host, port));
     }
 
     public static ProbeTypeMsg makeClientStepOneProbeTypeMsg(InetSocketAddress inetSocketAddress) {
@@ -324,7 +305,7 @@ public class MessageUtil {
     }
 
     public static ProbeTypeMsg makeClientStepTwoProbeTypeMsg(String host, int port) {
-        return makeClientStepTwoProbeTypeMsg(new InetSocketAddress(host,port));
+        return makeClientStepTwoProbeTypeMsg(new InetSocketAddress(host, port));
     }
 
     public static ProbeTypeMsg makeClientStepTwoProbeTypeMsg(InetSocketAddress inetSocketAddress) {
@@ -352,6 +333,50 @@ public class MessageUtil {
 
     public static String bytebuf2Str(ByteBuf buf) {
         return ByteBufUtil.hexDump(buf);
+    }
+
+    /***
+     * ----->使用新的Chunk之后,不保存ByteBuf类当数据,使用byte[]当数据
+     */
+    public static byte[] msg2Bytes(Message msg) {
+        int length = msg.getLength() + Message.VERSIONLENGTH + Message.CONTENTLENGTH + Message.ID_LEN;
+        byte[] result = new byte[length];
+
+        byte[] version = new byte[Message.VERSIONLENGTH];
+        version[0] = msg.getVersion();
+        System.arraycopy(version, 0, result, 0, version.length);
+
+        byte[] msgid = ByteUtil.long2ByteArr(msg.getMsgid());
+        System.arraycopy(msgid, 0, result, version.length, msgid.length);
+
+        byte[] len = ByteUtil.int2byteArr(msg.getLength());
+        System.arraycopy(len, 0, result, version.length +msgid.length, len.length);
+
+        byte[] bytes = msg.getContent().getBytes(CharsetUtil.UTF_8);
+        System.arraycopy(bytes, 0, result, version.length +msgid.length+len.length, bytes.length);
+        return result;
+    }
+
+    public static Message bytes2Msg(byte[] result) {
+        byte[] versionArr = new byte[Message.VERSIONLENGTH];
+        System.arraycopy(result, 0, versionArr, 0, versionArr.length);
+
+        byte[] msgidArr = new byte[Message.ID_LEN];
+        System.arraycopy(result, Message.VERSIONLENGTH, msgidArr, 0, msgidArr.length);
+        long msgid = ByteUtil.bytearr2Long(msgidArr);
+
+        byte[] lengthArr = new byte[Message.CONTENTLENGTH];
+        System.arraycopy(result, Message.VERSIONLENGTH + Message.ID_LEN, lengthArr, 0, lengthArr.length);
+        int length = ByteUtil.bytearr2Int(lengthArr);
+
+        byte[] bytesArr = new byte[length];
+        System.arraycopy(result, Message.VERSIONLENGTH + Message.ID_LEN + Message.CONTENTLENGTH, bytesArr, 0, bytesArr.length);
+
+        Message msg = new Message(msgid);
+        msg.setLength(length);
+        msg.setVersion(versionArr[0]);
+        msg.setContent(new String(bytesArr, CharsetUtil.UTF_8));
+        return msg;
     }
 
 

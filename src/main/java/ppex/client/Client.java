@@ -61,13 +61,16 @@ public class Client {
     private ClientHandler clientHandler;
 
     private static Client instance = null;
-    public static Client getInstance(){
-        if (instance == null){
+
+    public static Client getInstance() {
+        if (instance == null) {
             instance = new Client();
         }
         return instance;
     }
-    private Client(){}
+
+    private Client() {
+    }
 
     public void start() throws Exception {
         initParam();
@@ -108,8 +111,8 @@ public class Client {
         eventLoopGroup = epoll ? new EpollEventLoopGroup(cpunum) : new NioEventLoopGroup(cpunum);
         Class<? extends Channel> chnCls = epoll ? EpollDatagramChannel.class : NioDatagramChannel.class;
         bootstrap.channel(chnCls).group(eventLoopGroup);
-        bootstrap.option(ChannelOption.SO_BROADCAST,true).option(ChannelOption.SO_REUSEADDR,true)
-                .option(ChannelOption.RCVBUF_ALLOCATOR,new AdaptiveRecvByteBufAllocator(Rudp.HEAD_LEN,Rudp.MTU_DEFUALT,Rudp.MTU_DEFUALT));
+        bootstrap.option(ChannelOption.SO_BROADCAST, true).option(ChannelOption.SO_REUSEADDR, true)
+                .option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator(Rudp.HEAD_LEN, Rudp.MTU_DEFUALT, Rudp.MTU_DEFUALT));
 
         bootstrap.handler(clientHandler);
         channel = bootstrap.bind(PORT_3).sync().channel();
@@ -131,19 +134,38 @@ public class Client {
         RudpScheduleTask task = new RudpScheduleTask(executor, rudpPack, addrManager);
         executor.executeTimerTask(task, rudpPack.getInterval());
 
-        connServer2p1 = new Connection("Server2P1",addrServer2p1,"Server2P1", NatTypeUtil.NatType.UNKNOWN.getValue());
-        IOutput outputServer2P1 = new ClientOutput(channel,connServer2p1);
-        outputManager.put(addrServer2p1,outputServer2P1);
+        connServer2p1 = new Connection("Server2P1", addrServer2p1, "Server2P1", NatTypeUtil.NatType.UNKNOWN.getValue());
+        IOutput outputServer2P1 = new ClientOutput(channel, connServer2p1);
+        outputManager.put(addrServer2p1, outputServer2P1);
         RudpPack rudpPack2 = addrManager.get(addrServer2p1);
-        if (rudpPack2 == null){
-            rudpPack2 = new RudpPack(outputServer2P1,executor,responseListener);
-            addrManager.New(addrServer2p1,rudpPack2);
+        if (rudpPack2 == null) {
+            rudpPack2 = new RudpPack(outputServer2P1, executor, responseListener);
+            addrManager.New(addrServer2p1, rudpPack2);
 //            rudpPack2.sendReset();
         }
 
-        RudpScheduleTask task2 = new RudpScheduleTask(executor,rudpPack2,addrManager);
-        executor.executeTimerTask(task2,rudpPack2.getInterval());
+        RudpScheduleTask task2 = new RudpScheduleTask(executor, rudpPack2, addrManager);
+        executor.executeTimerTask(task2, rudpPack2.getInterval());
 
+    }
+
+    public void startTestClient() {
+        try {
+            initParam();
+            startBootstrap();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> stop()));
+    }
+
+    public void sendTestRudp2(){
+        TxtTypeMsg msg = new TxtTypeMsg();
+        msg.setContent("this is from client");
+        msg.setFrom(new InetSocketAddress("127.0.0.1", PORT_3));
+        msg.setTo(new InetSocketAddress("127.0.0.1", PORT_1));
+        msg.setReq(true);
+        this.getAddrManager().get(addrServer1).send2(MessageUtil.txtmsg2Msg(msg));
     }
 
     private void stop() {
@@ -157,10 +179,10 @@ public class Client {
         }
     }
 
-    private InetSocketAddress getLocalIpAddr(){
+    private InetSocketAddress getLocalIpAddr() {
         try {
             InetAddress addr = InetAddress.getLocalHost();
-            return new InetSocketAddress(addr,PORT_3);
+            return new InetSocketAddress(addr, PORT_3);
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }

@@ -79,7 +79,7 @@ public class ThroughProcess {
             RudpPack rudpPack;
 
             if (connType == Connect.TYPE.DIRECT) {
-                connect.setType(Connect.TYPE.CONNECT_PING.ordinal());
+                connect.setType(Connect.TYPE.CONNECT_PING_NORMAL.ordinal());
                 connect.setContent("");
                 throughTypeMsg.setContent(JSON.toJSONString(connect));
                 //等待返回pong就确认建立连接
@@ -87,7 +87,7 @@ public class ThroughProcess {
                 if (rudpPack == null) {
                     IOutput output = new ClientOutput(client.getChannel(),to);
                     client.getOutputManager().put(to.getAddress(),output);
-                    rudpPack = RudpPack.newInstance(output,client.getExecutor(),client.getResponseListener());
+                    rudpPack = RudpPack.newInstance(output,client.getExecutor(),client.getResponseListener(),client.getAddrManager());
                     client.getAddrManager().New(to.getAddress(),rudpPack);
                 }
 
@@ -115,7 +115,7 @@ public class ThroughProcess {
                 rudpPack.write(MessageUtil.throughmsg2Msg(throughTypeMsg));
             } else if (connType == Connect.TYPE.REVERSE) {
                 //首先向B 打洞
-                connect.setType(Connect.TYPE.CONNECT_PING.ordinal());
+                connect.setType(Connect.TYPE.CONNECT_PING_NORMAL.ordinal());
                 connect.setContent(connectionsStr);
                 throughTypeMsg.setContent(JSON.toJSONString(connect));
                 //率先打洞
@@ -123,7 +123,7 @@ public class ThroughProcess {
                 if (rudpPack == null) {
                     IOutput output = new ClientOutput(client.getChannel(),to);
                     client.getOutputManager().put(to.getAddress(),output);
-                    rudpPack = RudpPack.newInstance(output,client.getExecutor(),client.getResponseListener());
+                    rudpPack = RudpPack.newInstance(output,client.getExecutor(),client.getResponseListener(),client.getAddrManager());
                     client.getAddrManager().New(to.getAddress(),rudpPack);
                 }
 

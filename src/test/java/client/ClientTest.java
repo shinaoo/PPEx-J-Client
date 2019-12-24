@@ -5,6 +5,7 @@ import org.junit.Before;
 import org.junit.Test;
 import ppex.client.Client;
 import ppex.client.process.DetectProcess;
+import ppex.proto.msg.type.PingTypeMsg;
 import ppex.proto.msg.type.ProbeTypeMsg;
 import ppex.utils.NatTypeUtil;
 
@@ -17,7 +18,8 @@ public class ClientTest {
     @Before
     public void setup() throws Exception {
         client = Client.getInstance();
-        client.start();
+//        client.start();
+        client.startTestClient();
     }
 
     @After
@@ -60,9 +62,12 @@ public class ClientTest {
 
     @Test
     public void startDetectServer12S2P2() throws Exception {
-        //模拟s1或者S2P1给S2p2发送信息
 
+    }
 
+    @Test
+    public void startMultiMsgTest() throws Exception {
+//        IntStream.range(0,100).forEach(val -> client.sendPingTypeMsg());
     }
 
     @Test
@@ -71,4 +76,10 @@ public class ClientTest {
         IntStream.range(0, 50).forEach(val -> new Thread(() -> client.sendTest()).start());
         TimeUnit.SECONDS.sleep(20);
     }
+
+    @Test
+    public void Rudp2Test() throws Exception {
+        client.sendTestRudp2();
+    }
+
 }
