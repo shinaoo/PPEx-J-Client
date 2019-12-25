@@ -218,12 +218,12 @@ public class RudpPack {
         return this.rudp2.flush(time);
     }
 
-    public long canRcv2(){
+    public boolean canRcv2(){
         return this.rudp2.canRcv();
     }
 
-    public Message getMsg2(long msgId){
-        return this.rudp2.mergeMsg(msgId);
+    public Message getMsg2(){
+        return this.rudp2.mergeMsg();
     }
 
     public int getInterval2(){

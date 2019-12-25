@@ -33,8 +33,8 @@ public class Client {
 
      private static Logger LOGGER = LoggerFactory.getLogger(Client.class);
 
-//    private String HOST_SERVER1 = "10.5.11.162";
-    private String HOST_SERVER1 = "192.168.1.100";
+    private String HOST_SERVER1 = "10.5.11.162";
+//    private String HOST_SERVER1 = "192.168.1.100";
     private String HOST_SERVER2 = "10.5.11.55";
     private int PORT_1 = 9123;
     private int PORT_2 = 9124;
@@ -115,7 +115,7 @@ public class Client {
         Class<? extends Channel> chnCls = epoll ? EpollDatagramChannel.class : NioDatagramChannel.class;
         bootstrap.channel(chnCls).group(eventLoopGroup);
         bootstrap.option(ChannelOption.SO_BROADCAST, true).option(ChannelOption.SO_REUSEADDR, true)
-                .option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator(Rudp.HEAD_LEN, Rudp.MTU_DEFUALT, Rudp.MTU_DEFUALT));
+                .option(ChannelOption.SO_RCVBUF, Rudp.MTU_DEFUALT);
 
         bootstrap.handler(clientHandler);
         channel = bootstrap.bind(PORT_3).sync().channel();
