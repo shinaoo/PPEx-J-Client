@@ -27,6 +27,7 @@ public class Rudp2 {
     private LinkedList<Chunk> sndAckList = new LinkedList<>();
     private LinkedList<Chunk> rcvOrder = new LinkedList<>();
     private LinkedList<Chunk> rcvShambles = new LinkedList<>();
+    private LinkedList<Chunk> oldDataList = new LinkedList<>();
 
     //多线程操作使用同步
     private Object sndLock = new Object();
@@ -37,6 +38,8 @@ public class Rudp2 {
     private boolean rcvOrderWait = false;
     private Object rcvShamebleLock = new Object();
     private boolean rcvShambleWait = false;
+    private Object oldDataLock = new Object();
+    private boolean oldDataWait = false;
 
     //数据长度
     private int mtuBody = RudpParam.MTU_BODY;
@@ -52,6 +55,8 @@ public class Rudp2 {
 
     private ByteBufAllocator byteBufAllocator = PooledByteBufAllocator.DEFAULT;
 
+    //添加该标识位为了解决断开重连后消息处理问题
+    private byte tag = RudpParam.TAG_NEW;
 
     //发送数据公共接口
     private IOutput output;
@@ -61,6 +66,7 @@ public class Rudp2 {
         sndNxt = 0;
         rcvNxt = 0;
         sndUna = 0;
+        tag = RudpParam.TAG_NEW;
         LOGGER.info("sndLock:" + Integer.toHexString(System.identityHashCode(sndLock)) + " sndackLock:" + Integer.toHexString(System.identityHashCode(sndAckLock)) +
                 " rcvorderLock:" + Integer.toHexString(System.identityHashCode(rcvOrderLock)) + " rcvShamblesLock:" + Integer.toHexString(System.identityHashCode(rcvShamebleLock)));
     }
@@ -81,7 +87,6 @@ public class Rudp2 {
                     chunk.una = sndUna;
                     chunk.all = msgArrs.length;
                     chunk.msgid = msg.getMsgid();
-                    chunk.data = msgArrs[i];
                     chunk.length = chunk.data.length;
                     sndList.add(chunk);
                 }
@@ -183,6 +188,7 @@ public class Rudp2 {
             if (buf.readableBytes() <= 0) {
                 break;
             }
+            byte tag = buf.readByte();
             byte cmd = buf.readByte();
             long msgid = buf.readLong();
             int tot = buf.readInt();
@@ -201,11 +207,37 @@ public class Rudp2 {
                 case RudpParam.CMD_SND:
                     byte[] data = new byte[length];
                     buf.readBytes(data, 0, length);
-                    affirmSnd(msgid, tot, all, ts, sn, sndMax, length, data);
+//                    dealTag(sn, tag);
+                    //当sn == 0.己方为new而且对方消息也为new时，只需将自己的tag设为old
+                    //当己方为old时且对方消息为new时,这时候应该先将队列中所有的消息清除（不需要发送给对方。因为对方是新的。只需设置自己的sndNxt,sndUna,rcvNxt）
+                    //当己方为new时且对方消息为old时,不需要处理数据,发送sn为0的new数据。
+                    if (sn == 0) {
+                        if (this.tag == RudpParam.TAG_NEW && tag == RudpParam.TAG_NEW) {
+                            this.tag = RudpParam.TAG_OLD;
+                        }
+                        if (this.tag == RudpParam.TAG_OLD && tag == RudpParam.TAG_NEW) {
+                            sndNxt = 0;
+                            sndUna = 0;
+                            rcvNxt = 0;
+                            rcvNxt++;
+                            //清除所有发送数据
+                            sndList.clear();
+                            sndAckList.clear();
+                        }
+                    } else {
+                        if (this.tag == RudpParam.TAG_NEW && tag == RudpParam.TAG_OLD) {
+                            Message msg = new Message(-1);
+                            msg.setContent("");
+                            snd(msg);
+                            flushAck(sn);
+                            break;
+                        }
+                    }
+                    affirmSnd(tag, msgid, tot, all, ts, sn, sndMax, length, data);
                     arrangeRcvShambles();
                     break;
                 case RudpParam.CMD_ACK:
-                    affirmAck(sn);
+                    affirmAck(sn, tag);
                     break;
             }
         }
@@ -224,6 +256,7 @@ public class Rudp2 {
     }
 
     private void encodeBytebuf(ByteBuf buf, Chunk chunk) {
+        buf.writeByte(tag);
         buf.writeByte(chunk.cmd);
         buf.writeLong(chunk.msgid);
         buf.writeInt(chunk.tot);
@@ -243,15 +276,20 @@ public class Rudp2 {
         }
     }
 
-    private void affirmAck(int sn) {
+    private void affirmAck(int sn, byte tag) {
 //        LOGGER.info("rudp2 affirmAck :" + " order size:" + rcvOrder.size() + " sb size:" + rcvShambles.size());
+        if (sn == 0 && this.tag == RudpParam.TAG_NEW){
+            this.tag = RudpParam.TAG_OLD;
+        }
         synchronized (sndAckLock) {
-
             try {
                 while (sndAckWait) {
                     sndAckLock.wait();
                 }
                 sndAckWait = true;
+                if (sn == 0 && tag == RudpParam.TAG_OLD) {
+                    this.tag = RudpParam.TAG_OLD;
+                }
                 sndAckList.removeIf(chunk -> chunk.sn == sn);
                 if (sndAckList.isEmpty()) {
                     sndUna = sndNxt;
@@ -268,7 +306,10 @@ public class Rudp2 {
         }
     }
 
-    private void affirmSnd(long msgid, int tot, int all, long ts, int sn, int una, int length, byte[] data) {
+    private void dealTag(int sn, byte tag) {
+    }
+
+    private void affirmSnd(byte tag, long msgid, int tot, int all, long ts, int sn, int una, int length, byte[] data) {
         Chunk chunk = Chunk.newChunk(data);
         chunk.msgid = msgid;
         chunk.tot = tot;
@@ -307,10 +348,8 @@ public class Rudp2 {
     }
 
     private void arrangeRcvShambles() {
-//        LOGGER.info("rudp2 arrangeRcvShambles :" + " order size:" + rcvOrder.size() + " sb size:" + rcvShambles.size());
         LinkedList<Chunk> addList = new LinkedList<>();
         synchronized (rcvShamebleLock) {
-
             try {
                 while (rcvShambleWait) {
                     rcvShamebleLock.wait();
