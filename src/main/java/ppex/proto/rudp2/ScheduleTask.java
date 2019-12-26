@@ -46,6 +46,10 @@ public class ScheduleTask implements ITask {
             if (!rudpPack.getQueue_snd().isEmpty()) {
                 rudpPack.notifySndTask2();
             }
+            if (rudpPack.getRcvOrder().size() != 0 || rudpPack.getRcvShambles().size() != 0) {
+                LOGGER.info("order size:" + rudpPack.getRcvOrder().size() + " shambles size:" + rudpPack.getRcvShambles().size());
+                rudpPack.notifyRcvTask2();
+            }
 
         } catch (Exception e) {
             e.printStackTrace();

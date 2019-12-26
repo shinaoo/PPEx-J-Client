@@ -29,16 +29,16 @@ public class RcvTask implements ITask {
         try {
             ConcurrentLinkedQueue<ByteBuf> rcvList = rpkg.getQueue_rcv();
             long time = System.currentTimeMillis();
-            while (!rcvList.isEmpty()) {
+            while (rcvList.size() > 0) {
                 ByteBuf buf = rcvList.poll();
                 if (buf == null)
                     continue;
                 rpkg.input2(buf,time);
                 buf.release();
             }
+            this.rpkg.arrangeRcvData();
             while(rpkg.canRcv2()){
                 Message msg = rpkg.getMsg2();
-//                LOGGER.info("rcv msg:" + msg.getMsgid());
                 if (msg == null)
                     continue;
                 rpkg.getListener().onResponse(rpkg,msg);
