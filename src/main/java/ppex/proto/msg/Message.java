@@ -33,7 +33,8 @@ public class Message {
     private byte version;
     private long msgid;
     private int length;
-    private String content;
+//    private String content;
+    private byte[] content;
 
     public Message(long msgid) {
         this.msgid = msgid;
@@ -64,18 +65,23 @@ public class Message {
         this.length = length;
     }
 
-    public String getContent() {
+    public byte[] getContent() {
         return content;
     }
 
-    public void setContent(String content) {
+    public void setContent(byte[] content){
         this.content = content;
-        this.length = content.getBytes(CharsetUtil.UTF_8).length;
+        this.length = this.content.length;
+    }
+
+    public void setContent(String content) {
+        this.content = content.getBytes(CharsetUtil.UTF_8);
+        this.length = this.content.length;
     }
 
     public void setContent(TypeMessage typeMessage){
-        this.content = JSON.toJSONString(typeMessage);
-        this.length = content.getBytes(CharsetUtil.UTF_8).length;
+        this.content = JSON.toJSONString(typeMessage).getBytes(CharsetUtil.UTF_8);
+        this.length = this.content.length;
     }
 
     @Override

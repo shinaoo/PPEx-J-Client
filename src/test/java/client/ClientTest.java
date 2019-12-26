@@ -81,7 +81,7 @@ public class ClientTest {
     public void Rudp2Test() throws Exception {
         IntStream.range(0, 1000).forEach(val -> client.sendTestRudp2());
 //        client.sendTestRudp2();
-        TimeUnit.SECONDS.sleep(2);
+        TimeUnit.SECONDS.sleep(10);
     }
 
 }

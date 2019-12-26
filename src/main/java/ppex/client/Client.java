@@ -18,6 +18,7 @@ import ppex.client.rudp.ClientOutput;
 import ppex.client.rudp.ClientOutputManager;
 import ppex.client.rudp.MsgResponse;
 import ppex.proto.entity.Connection;
+import ppex.proto.msg.Message;
 import ppex.proto.msg.type.TxtTypeMsg;
 import ppex.proto.rudp.*;
 import ppex.proto.rudp2.ScheduleTask;
@@ -175,11 +176,12 @@ public class Client {
     public void sendTestRudp2(){
 
         TxtTypeMsg msg = new TxtTypeMsg();
-        msg.setContent("this is from client");
+        msg.setContent("this is from clientthis is from is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from clientthis is from client");
         msg.setFrom(new InetSocketAddress("127.0.0.1", PORT_3));
         msg.setTo(new InetSocketAddress("127.0.0.1", PORT_1));
         msg.setReq(true);
-        this.getAddrManager().get(addrServer1).send2(MessageUtil.txtmsg2Msg(msg));
+        Message sndmsg = MessageUtil.txtmsg2Msg(msg);
+        this.getAddrManager().get(addrServer1).send2(sndmsg);
     }
 
     private void stop() {

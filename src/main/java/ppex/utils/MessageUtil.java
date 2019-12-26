@@ -4,6 +4,8 @@ import com.alibaba.fastjson.JSON;
 import io.netty.buffer.*;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ppex.proto.msg.Message;
 import ppex.proto.msg.type.*;
 
@@ -11,6 +13,7 @@ import java.net.InetSocketAddress;
 
 public class MessageUtil {
 
+    private static Logger LOGGER = LoggerFactory.getLogger(MessageUtil.class);
 
     //分配ByteBuf类
     private static ByteBufAllocator byteBufAllocator = ByteBufAllocator.DEFAULT;
@@ -22,7 +25,7 @@ public class MessageUtil {
         msgBuf.writeLong(msg.getMsgid());
         msgBuf.writeByte(msg.getVersion());
         msgBuf.writeInt(msg.getLength());
-        byte[] bytes = msg.getContent().getBytes(CharsetUtil.UTF_8);
+        byte[] bytes = msg.getContent();
         msgBuf.writeBytes(bytes);
         return msgBuf;
     }
@@ -350,10 +353,10 @@ public class MessageUtil {
         System.arraycopy(msgid, 0, result, version.length, msgid.length);
 
         byte[] len = ByteUtil.int2byteArr(msg.getLength());
-        System.arraycopy(len, 0, result, version.length +msgid.length, len.length);
+        System.arraycopy(len, 0, result, version.length + msgid.length, len.length);
 
-        byte[] bytes = msg.getContent().getBytes(CharsetUtil.UTF_8);
-        System.arraycopy(bytes, 0, result, version.length +msgid.length+len.length, bytes.length);
+        byte[] bytes = msg.getContent();
+        System.arraycopy(bytes, 0, result, version.length + msgid.length + len.length, bytes.length);
         return result;
     }
 
@@ -370,12 +373,17 @@ public class MessageUtil {
         int length = ByteUtil.bytearr2Int(lengthArr);
 
         byte[] bytesArr = new byte[length];
-        System.arraycopy(result, Message.VERSIONLENGTH + Message.ID_LEN + Message.CONTENTLENGTH, bytesArr, 0, bytesArr.length);
+        try {
+            System.arraycopy(result, Message.VERSIONLENGTH + Message.ID_LEN + Message.CONTENTLENGTH, bytesArr, 0, bytesArr.length);
+        }catch (Exception e){
+            LOGGER.info("version:" + versionArr[0] + " msgid:" + msgid + " length:" + length + " result length:" + result.length);
+            e.printStackTrace();
+        }
 
         Message msg = new Message(msgid);
         msg.setLength(length);
         msg.setVersion(versionArr[0]);
-        msg.setContent(new String(bytesArr, CharsetUtil.UTF_8));
+        msg.setContent(bytesArr);
         return msg;
     }
 
