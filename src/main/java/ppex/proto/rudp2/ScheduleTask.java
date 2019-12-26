@@ -3,6 +3,7 @@ package ppex.proto.rudp2;
 import io.netty.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ppex.proto.Statistic;
 import ppex.proto.rudp.IAddrManager;
 import ppex.proto.rudp.RudpPack;
 import ppex.proto.tpool.ITask;
@@ -50,7 +51,8 @@ public class ScheduleTask implements ITask {
                 LOGGER.info("order size:" + rudpPack.getRcvOrder().size() + " shambles size:" + rudpPack.getRcvShambles().size());
                 rudpPack.notifyRcvTask2();
             }
-
+            System.out.printf("sndCount:%d,sndAckCount:%d,outputCount:%d\nrcvCount:%d,rcvOrderCount:%d,rcvAckCount:%d\nresponseCount:%d",
+                    Statistic.sndCount.get(), Statistic.sndAckCount.get(), Statistic.outputCount.get(), Statistic.rcvCount.get(), Statistic.rcvOrderCount.get(), Statistic.rcvAckCount.get(), Statistic.responseCount.get());
         } catch (Exception e) {
             e.printStackTrace();
         }

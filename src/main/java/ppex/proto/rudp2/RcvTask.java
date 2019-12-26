@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ppex.proto.Statistic;
 import ppex.proto.msg.Message;
 import ppex.proto.rudp.RudpPack;
 import ppex.proto.tpool.ITask;
@@ -40,8 +41,9 @@ public class RcvTask implements ITask {
             while(rpkg.canRcv2()){
                 Message msg = rpkg.getMsg2();
                 if (msg == null)
-                    continue;
+                    break;
                 rpkg.getListener().onResponse(rpkg,msg);
+                Statistic.responseCount.getAndIncrement();
             }
         } catch (Exception e) {
             e.printStackTrace();
