@@ -72,8 +72,7 @@ public class ClientTest {
 
     @Test
     public void multiThreadTest() throws Exception {
-        //todo 多线程测试未通过
-        IntStream.range(0, 50).forEach(val -> new Thread(() -> client.sendTest()).start());
+        IntStream.range(0, 100).forEach(val -> new Thread(() -> client.sendTest()).start());
         TimeUnit.SECONDS.sleep(20);
     }
 
@@ -81,7 +80,7 @@ public class ClientTest {
     public void Rudp2Test() throws Exception {
         IntStream.range(0, 1000).forEach(val -> client.sendTestRudp2());
 //        client.sendTestRudp2();
-        TimeUnit.SECONDS.sleep(10);
+        TimeUnit.SECONDS.sleep(5);
     }
 
 }
