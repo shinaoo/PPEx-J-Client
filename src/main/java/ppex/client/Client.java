@@ -34,8 +34,8 @@ public class Client {
 
      private static Logger LOGGER = LoggerFactory.getLogger(Client.class);
 
-    private String HOST_SERVER1 = "10.5.11.162";
-//    private String HOST_SERVER1 = "192.168.1.100";
+//    private String HOST_SERVER1 = "10.5.11.162";
+    private String HOST_SERVER1 = "192.168.1.100";
     private String HOST_SERVER2 = "10.5.11.55";
     private int PORT_1 = 9123;
     private int PORT_2 = 9124;

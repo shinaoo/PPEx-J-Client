@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 2019-12-23.暂不考虑其他重传算法以及RTT,RTO等时间计算.直接简单粗暴发送与接收
@@ -27,10 +27,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Rudp2 {
     private static Logger LOGGER = LoggerFactory.getLogger(Rudp2.class);
     //发送数据与接收数据的集合
-    private LinkedList<Chunk> sndList = new LinkedList<>();
-    private LinkedList<Chunk> sndAckList = new LinkedList<>();
-    private LinkedList<Chunk> rcvOrder = new LinkedList<>();
-    private LinkedList<Chunk> rcvShambles = new LinkedList<>();
+    private volatile LinkedList<Chunk> sndList = new LinkedList<>();
+    private volatile LinkedList<Chunk> sndAckList = new LinkedList<>();
+    private volatile LinkedList<Chunk> rcvOrder = new LinkedList<>();
+    private volatile LinkedList<Chunk> rcvShambles = new LinkedList<>();
 
     //多线程操作使用同步
     private Object sndLock = new Object();
@@ -41,6 +41,12 @@ public class Rudp2 {
     private volatile boolean rcvOrderWait = false;
     private Object rcvShamebleLock = new Object();
     private volatile boolean rcvShambleWait = false;
+
+    //2019-12-28。只有状态为old的时候发消息。新增start指令。用来握手
+    //现在改成这样达成通信协议。只有通过start指令确认后才可以通信。其它都进行丢弃
+    public byte tag = RudpParam.TAG_NEW;
+    private volatile boolean isConnecting = false;
+    private long startChunkTs = 0;
 
     //数据长度
     private int mtuBody = RudpParam.MTU_BODY;
@@ -58,18 +64,6 @@ public class Rudp2 {
 
     private ByteBufAllocator byteBufAllocator = PooledByteBufAllocator.DEFAULT;
 
-    //添加该标识位为了解决断开重连后消息处理问题
-    private byte tag = RudpParam.TAG_NEW;
-    private long tagOts = -2;
-
-    //出现在arrangeRcvShambles方法里面
-    //在rcv的时候,有时候已经处理了sn未某个号码了,也已经返回了ack给client.但是后面处理的时候rcvShambles里面并没有该sn保存.
-    // 猜测理由是在affirmSnd的时候没有保存进去.暂时使用一个变量跳过该sn,超过5次就跳过该sn.暂时标记为lost
-    //当时同一个snLost超过5000次,而且时间在2秒之内
-    private AtomicInteger lostCount;
-    private int snLost;
-    private long lostTime;
-
 
     //发送数据公共接口
     private IOutput output;
@@ -80,13 +74,43 @@ public class Rudp2 {
         rcvNxt = 0;
         sndUna = 0;
         tag = RudpParam.TAG_NEW;
-        lostCount = new AtomicInteger(0);
-        snLost = -1;
 //        LOGGER.info("sndLock:" + Integer.toHexString(System.identityHashCode(sndLock)) + " sndackLock:" + Integer.toHexString(System.identityHashCode(sndAckLock)) +
 //                " rcvorderLock:" + Integer.toHexString(System.identityHashCode(rcvOrderLock)) + " rcvShamblesLock:" + Integer.toHexString(System.identityHashCode(rcvShamebleLock)));
     }
 
-    //外面将msg放入Rudp的开始,可能有多个线程同时操作sndList
+    public void sndStartChunk() {
+        if (this.tag == RudpParam.TAG_NEW) {
+            if (!isConnecting) {
+                isConnecting = true;
+                try {
+                    startChunkTs = System.currentTimeMillis();
+                    while (this.tag != RudpParam.TAG_OLD) {
+                        Chunk chunk = Chunk.newChunk(new byte[0]);
+                        chunk.tag = tag;
+                        chunk.cmd = RudpParam.CMD_START;
+                        chunk.msgid = -1;
+                        chunk.tot = 0;
+                        chunk.all = 1;
+                        chunk.ots = startChunkTs;
+                        chunk.ts = startChunkTs;
+                        chunk.sn = 0;
+                        chunk.una = sndUna;
+                        chunk.length = chunk.data.length;
+                        ByteBuf buf1 = createOutputByteBuf(chunk);
+                        sndChunk(buf1, 0);
+                        TimeUnit.SECONDS.sleep(1);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    isConnecting = false;
+                }
+            } else {
+                return;
+            }
+        }
+    }
+
     public boolean snd(Message msg) {
         byte[] msgArr = MessageUtil.msg2Bytes(msg);
         byte[][] msgArrs = ByteUtil.splitArr(msgArr, mtuBody);
@@ -107,7 +131,7 @@ public class Rudp2 {
                     chunk.una = sndUna;
                     chunk.length = chunk.data.length;
                     sndList.add(chunk);
-//                    Statistic.sndCount.incrementAndGet();
+                    Statistic.sndCount.incrementAndGet();
                 }
             } catch (Exception e) {
             } finally {
@@ -221,78 +245,73 @@ public class Rudp2 {
             if (buf.readableBytes() < length) {
                 return;
             }
-            if (cmd != RudpParam.CMD_SND && cmd != RudpParam.CMD_ACK) {
+            if (cmd != RudpParam.CMD_SND && cmd != RudpParam.CMD_ACK && cmd != RudpParam.CMD_START && cmd != RudpParam.CMD_START_ACK) {
                 return;
             }
             switch (cmd) {
                 case RudpParam.CMD_SND:
                     byte[] data = new byte[length];
                     buf.readBytes(data, 0, length);
-//                    dealTag(sn, tag);
-                    //当sn == 0.己方为new而且对方消息也为new时，只需将自己的tag设为old
-                    //当己方为old时且对方消息为new时,这时候应该先将队列中所有的消息清除（不需要发送给对方。因为对方是新的。只需设置自己的sndNxt,sndUna,rcvNxt）
-                    //当己方为new时且对方消息为old时,不需要处理数据,发送sn为0的new数据。
-                    //出现一个情况就是,当双方都是new时,改变了自己的tag为old之后,还会收到sn为0的sn,这时候直接进入了第二个this.tag = old and tag = new的情况,直接清掉了rcvShamble和order的所有数据
-                    //利用Msgid来确认第二次的sn与第一次的sn是同一个sn.防止进入第二个this.tag=old
-                    //上面说利用Msgid来确认情况也会出现错误
-                    //新增一个ots字段来确认是同一个sn
-                    if (sn == 0) {
-                        if (this.tag == RudpParam.TAG_NEW && tag == RudpParam.TAG_NEW) {
-                            this.tag = RudpParam.TAG_OLD;
-                            this.tagOts = ots;
-                        }
-                        if (this.tag == RudpParam.TAG_OLD && tag == RudpParam.TAG_NEW) {
-                            //当新的收到旧的发来的信息时,上面的第三个注释,当己方为new时且对方消息为old.对应下面的else中的if情况
-                            if (msgid == -1) {
-                                sndNxt = 0;
-                                sndUna = 0;
-                                rcvNxt = 0;
-                                sndList.clear();
-                                sndAckList.clear();
-                                rcvShambles.clear();
-                                rcvOrder.clear();
-                            }
-                            //重复收到sn为0.即一开始都是NEW,但是己方改为old之后还能收到NEW(重传)重复发过来的sn为0的情况.
-                            if (this.tagOts != ots) {
-                                sndNxt = 0;
-                                sndUna = 0;
-                                rcvNxt = 0;
-                                sndList.clear();
-                                sndAckList.clear();
-                                rcvShambles.clear();
-                                rcvOrder.clear();
-                            }
-                        }
-                    }else{
-
-                    }
-                    //当新的收到旧的发来的信息时,上面的第三个注释,当己方为new时且对方消息为old
-                    if (this.tag == RudpParam.TAG_NEW && tag == RudpParam.TAG_OLD) {
-                        //直接发送一个chunk
-                        Chunk chunk = Chunk.newChunk(new byte[0]);
-                        chunk.tag = tag;
-                        chunk.cmd = RudpParam.CMD_SND;
-                        chunk.msgid = -1;
-                        chunk.tot = 0;
-                        chunk.all =1;
-                        chunk.ots = System.currentTimeMillis();
-                        chunk.ts = System.currentTimeMillis();
-                        chunk.sn = 0;
-                        chunk.una = sndUna;
-                        chunk.length = chunk.data.length;
-                        ByteBuf buf1 = createOutputByteBuf(chunk);
-                        sndChunk(buf1,0);
-                        break;
-                    }
-
+                    //todo 应该还要处理一种 this.tag == New && tag== Old的情况
                     affirmSnd(tag, msgid, tot, all, ts, sn, sndMax, length, data);
-//                    arrangeRcvShambles();
                     break;
                 case RudpParam.CMD_ACK:
                     affirmAck(sn, tag);
                     Statistic.rcvAckCount.getAndIncrement();
                     break;
+                case RudpParam.CMD_START:
+                    rcvStartChunk(tag, ots);
+                    break;
+                case RudpParam.CMD_START_ACK:
+                    affirmStartChunkAck(tag, ots);
+                    break;
             }
+        }
+    }
+
+    private void rcvStartChunk(byte tag, long ots) {
+        //收到startChunk都是New的一方发送过来的。需要清理这边的所有数据
+        LOGGER.info("rcv start chunk:" + tag + " ts:" +ots);
+        if (tag == RudpParam.TAG_NEW) {
+            if (this.tag == RudpParam.TAG_NEW) {
+                this.tag = RudpParam.TAG_OLD;
+                this.startChunkTs = ots;
+            } else if (this.tag == RudpParam.TAG_OLD && this.startChunkTs != ots) {          //利用这个rcvTagTs判断是否由TAG_NEW转成OLD之后再次接收到的startchunk
+                sndNxt = 0;
+                sndUna = 0;
+                rcvNxt = 0;
+                sndList.clear();
+                sndWait = false;
+                sndAckList.clear();
+                sndAckWait = false;
+                rcvShambles.removeIf(chunk -> chunk.ts < ots);
+                rcvShambleWait = false;
+                rcvOrder.removeIf(chunk -> chunk.ts < ots);
+                rcvOrderWait = false;
+            }
+            Chunk chunk = Chunk.newChunk(new byte[0]);
+            chunk.tag = this.tag;
+            chunk.cmd = RudpParam.CMD_START_ACK;
+            chunk.msgid = -1;
+            chunk.tot = 0;
+            chunk.all = 1;
+            chunk.ots = ots;
+            chunk.ts = ots;
+            chunk.sn = 0;
+            chunk.una = sndUna;
+            chunk.length = chunk.data.length;
+            chunk.xmit = 0;
+//            sndAckList.addLast(chunk);
+            ByteBuf buf = createOutputByteBuf(chunk);
+            sndChunk(buf,chunk.sn);
+            LOGGER.info("snd back chunk");
+        }
+    }
+
+    private void affirmStartChunkAck(byte tag, long ots) {
+        if (this.tag == RudpParam.TAG_NEW && tag == RudpParam.TAG_OLD && this.startChunkTs == ots) {
+            this.tag = RudpParam.TAG_OLD;
+            isConnecting = false;
         }
     }
 
@@ -332,10 +351,6 @@ public class Rudp2 {
     }
 
     private void affirmAck(int sn, byte tag) {
-//        LOGGER.info("rudp2 affirmAck :" + " order size:" + rcvOrder.size() + " sb size:" + rcvShambles.size());
-        if (sn == 0 && this.tag == RudpParam.TAG_NEW) {
-            this.tag = RudpParam.TAG_OLD;
-        }
         synchronized (sndAckLock) {
             try {
                 while (sndAckWait) {
@@ -413,17 +428,18 @@ public class Rudp2 {
                     rcvShamebleLock.wait();
                 }
                 rcvShambleWait = true;
-                for (Iterator<Chunk> itr = rcvShambles.iterator(); itr.hasNext(); ) {
-                    Chunk chunk = itr.next();
-                    if (chunk.sn == rcvNxt) {
-                        addList.add(chunk);
-                        itr.remove();
-                        rcvNxt++;
-                    } else if (chunk.sn < rcvNxt) {
-                        itr.remove();
+                while (rcvShambles.stream().anyMatch(chunk -> chunk.sn == rcvNxt)) {
+                    for (Iterator<Chunk> itr = rcvShambles.iterator(); itr.hasNext(); ) {
+                        Chunk chunk = itr.next();
+                        if (chunk.sn == rcvNxt) {
+                            addList.add(chunk);
+                            itr.remove();
+                            rcvNxt++;
+                        } else if (chunk.sn < rcvNxt) {
+                            itr.remove();
+                        }
                     }
                 }
-                LOGGER.info("arrangeRcvShambles rcvNxt:" + rcvNxt);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -584,5 +600,10 @@ public class Rudp2 {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    //配合一开始是否能够开始发送数据
+    public boolean canSndMsg() {
+        return this.tag == RudpParam.TAG_OLD;
     }
 }

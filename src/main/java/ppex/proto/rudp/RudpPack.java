@@ -153,6 +153,7 @@ public class RudpPack {
     public void release() {
 //        rudp.release();
         rcvQueue.forEach(buf -> buf.release());
+        this.rudp2 = null;
     }
 
     public ConcurrentLinkedQueue<Message> getQueue_snd() {
@@ -219,6 +220,13 @@ public class RudpPack {
         this.executor.execute(rt);
     }
 
+    public boolean canSnd2(){
+        return this.rudp2.canSndMsg();
+    }
+
+    public void sndStartConnecting(){
+        this.rudp2.sndStartChunk();
+    }
     public int getRcvNxt2(){
         return rudp2.getRcvNxt();
     }
